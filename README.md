@@ -1,4 +1,4 @@
-# Mirror Puzzle
+# Beer Dispenser
 _demo of beer-dispenser scene running in preview._
 
 ![demo](https://github.com/decentraland-scenes/beer-dispenser/blob/main/screenshots/beer-dispenser.gif)
@@ -7,7 +7,11 @@ _demo of beer-dispenser scene running in preview._
 A beer dispenser that uses P2P messaging so that you can pour beer for yourself and friends. To view the scene, please visit [here](https://beer-dispenser.vercel.app/).
 
 ## Instructions
-Pick up and put down the beer glass using the <kbd>E</kbd> key - you will only be able to place the beer glass on a flat surface that's pointing upwards. To fill a glass, place it at one of the bases on the dispenser and then press on the corresponding tap using the the <kbd>E</kbd> key again. Use your mouse to look around and <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> keys on your keyboard to move forward, left, backward and right respectively. Finally, pressing the <kbd>Space</kbd> key will make your avatar jump.
+Pick up and put down the beer glass using the <kbd>E</kbd> key - you will only be able to place the beer glass on a flat surface that's pointing upwards. To fill a glass, place it at one of the bases on the dispenser and then press on the corresponding tap using the the <kbd>E</kbd> key again; to drink the beer just press the <kbd>F</kbd> key. Use your mouse to look around and <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> keys on your keyboard to move forward, left, backward and right respectively. Finally, pressing the <kbd>Space</kbd> key will make your avatar jump.
+
+If you launch a scene preview and open it in two (or more) different browser windows, each open window will be interpreted as a separate player, and a mock communications server will keep these players in sync.
+
+_Note: Open separate browser windows. If you open separate tabs in the same window, the interaction won’t work properly, as only one tab will be treated as active by the browser at a time._
 
 ## Try it out
 
