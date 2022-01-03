@@ -99,7 +99,7 @@ export class BeerGlass extends Entity {
   }
 
   public pickup(id: number, playerId?: string): void {
-    this.lastPos = this.glass.getComponent(Transform).position.clone()
+    this.lastPos = this.glass.getComponent(Transform).position
     this.beerBaseState = BeerBaseState.NONE
     this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
@@ -141,7 +141,7 @@ export class BeerGlass extends Entity {
         })
       )
     }
-    this.glass.getComponent(Transform).position = this.holdPosition.clone()
+    this.glass.getComponent(Transform).position = this.holdPosition
     this.glass
       .getComponent(Transform)
       .rotate(Vector3.Right(), this.rotatePosition)
