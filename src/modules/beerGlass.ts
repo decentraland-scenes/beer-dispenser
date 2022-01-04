@@ -92,8 +92,8 @@ export class BeerGlass extends Entity {
     label.setParent(this.glass)
     label.addComponent(
       new Transform({
-        position: new Vector3(0, 0.5, 0),
-        scale: new Vector3(0.5, 0.5, 0.5),
+        position: new Vector3(0, 0.4, 0),
+        scale: new Vector3(0.2, 0.2, 0.2),
       })
     )
     label.addComponent(new TextShape(this.id.toString()))
@@ -113,7 +113,7 @@ export class BeerGlass extends Entity {
     this.glass.getComponent(Animator).getClip('PourGreen').stop()
   }
 
-  public pickup(playerId?: string): void {
+  public pickup(playerId: string): void {
     this.lastPos = this.glass.getComponent(Transform).position
     this.beerBaseState = BeerBaseState.NONE
     this.setParent(null)
@@ -123,7 +123,7 @@ export class BeerGlass extends Entity {
 
     pickUpSound.getComponent(AudioSource).playOnce()
 
-    if (playerId && playerId !== thisPlayer) {
+    if (playerId !== thisPlayer) {
       log('PICKING UP FOR ', playerId)
       this.addComponentOrReplace(
         new AttachToAvatar({
@@ -131,21 +131,6 @@ export class BeerGlass extends Entity {
           anchorPointId: AttachToAvatarAnchorPointId.NameTag,
         })
       )
-
-      let index: number | undefined = undefined
-      for (let i = 0; i < playersCarryingBeer.length; i++) {
-        if (playersCarryingBeer[i].id === playerId) {
-          index = i
-        }
-      }
-      if (index) {
-        playersCarryingBeer[index].beer = this
-      } else {
-        playersCarryingBeer.push({
-          id: playerId,
-          beer: this,
-        })
-      }
     } else {
       log('PICKING UP FOR ME', playerId)
       this.setParent(Attachable.FIRST_PERSON_CAMERA)
@@ -157,16 +142,42 @@ export class BeerGlass extends Entity {
         })
       )
     }
+
     this.glass.getComponent(Transform).position = this.holdPosition
     this.glass
       .getComponent(Transform)
       .rotate(Vector3.Right(), this.rotatePosition)
+
+    let index: number | undefined = undefined
+    for (let i = 0; i < playersCarryingBeer.length; i++) {
+      if (playersCarryingBeer[i].id === playerId) {
+        index = i
+      }
+
+      // someone stole the beer from your hands
+      if (
+        playersCarryingBeer[i] &&
+        playersCarryingBeer[i].id === thisPlayer &&
+        playersCarryingBeer[i].beer &&
+        playersCarryingBeer[i].beer!.id === this.id
+      ) {
+        Player.holdingBeerGlass = false
+      }
+    }
+    if (index) {
+      playersCarryingBeer[index].beer = this
+    } else {
+      playersCarryingBeer.push({
+        id: playerId,
+        beer: this,
+      })
+    }
   }
 
   putDown(
     placePosition: Vector3,
-    beerBaseState?: BeerBaseState,
-    playerId?: string
+    beerBaseState: BeerBaseState,
+    playerId: string
   ): void {
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
@@ -181,25 +192,35 @@ export class BeerGlass extends Entity {
       })
     )
     putDownSound.getComponent(AudioSource).playOnce()
-    Player.holdingBeerGlass = false
-
-    if (beerBaseState) {
-      this.beerBaseState = beerBaseState
-    }
 
     this.glass.getComponent(Transform).position = Vector3.Zero()
     this.glass.getComponent(Transform).rotation = Quaternion.Zero()
 
-    if (playerId) {
-      let index: number | undefined = undefined
-      for (let i = 0; i < playersCarryingBeer.length; i++) {
-        if (playersCarryingBeer[i].id === playerId) {
-          index = i
-        }
+    this.beerBaseState = beerBaseState
+
+    // you put the beer down
+    if (playerId === thisPlayer) {
+      Player.holdingBeerGlass = false
+    }
+
+    let index: number | undefined = undefined
+    for (let i = 0; i < playersCarryingBeer.length; i++) {
+      if (playersCarryingBeer[i].id === playerId) {
+        index = i
       }
-      if (index) {
-        playersCarryingBeer[index].beer = undefined
+
+      // someone stole the beer from your hands & put it down
+      if (
+        playersCarryingBeer[i] &&
+        playersCarryingBeer[i].id === thisPlayer &&
+        playersCarryingBeer[i].beer &&
+        playersCarryingBeer[i].beer!.id === this.id
+      ) {
+        Player.holdingBeerGlass = false
       }
+    }
+    if (index) {
+      playersCarryingBeer[index].beer = undefined
     }
   }
 
