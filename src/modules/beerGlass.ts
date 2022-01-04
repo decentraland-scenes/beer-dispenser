@@ -114,7 +114,7 @@ export class BeerGlass extends Entity {
   }
 
   public pickup(playerId: string): void {
-    this.lastPos = this.glass.getComponent(Transform).position
+    this.lastPos = this.getComponent(Transform).position
     this.beerBaseState = BeerBaseState.NONE
     this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
@@ -234,10 +234,17 @@ export class BeerGlass extends Entity {
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
     }
-    this.getComponent(Transform).position = this.lastPos
+    this.addComponentOrReplace(
+      new Transform({
+        position: this.lastPos,
+        rotation: Quaternion.Zero(),
+      })
+    )
     this.glass.getComponent(Transform).position = Vector3.Zero()
+    this.glass.getComponent(Transform).rotation = Quaternion.Zero()
     this.beerBaseState = BeerBaseState.NONE
     this.isFull = false
+    Player.holdingBeerGlass = false
   }
 
   addPointerDown() {
