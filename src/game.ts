@@ -42,11 +42,6 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
                 beerState: BeerBaseState.RED_BEER,
                 carryingPlayer: thisPlayer,
               })
-              //   beerGlasses[i].putDown(
-              //     i,
-              //     beerPosition,
-              //     (beerGlasses[i].beerBaseState = BeerBaseState.RED_BEER)
-              //   )
               break
             case 'yellowBase_collider':
               beerPosition = beerDispenser
@@ -60,11 +55,6 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
                 beerState: BeerBaseState.YELLOW_BEER,
                 carryingPlayer: thisPlayer,
               })
-              //   beerGlasses[i].putDown(
-              //     i,
-              //     beerPosition,
-              //     (beerGlasses[i].beerBaseState = BeerBaseState.YELLOW_BEER)
-              //   )
 
               break
             case 'greenBase_collider':
@@ -79,11 +69,7 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
                 beerState: BeerBaseState.GREEN_BEER,
                 carryingPlayer: thisPlayer,
               })
-              //   beerGlasses[i].putDown(
-              //     i,
-              //     beerPosition,
-              //     (beerGlasses[i].beerBaseState = BeerBaseState.GREEN_BEER)
-              //   )
+
               break
             default:
               log('DEFAULT')
@@ -94,7 +80,7 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
                 beerState: BeerBaseState.NONE,
                 carryingPlayer: thisPlayer,
               })
-              //   beerGlasses[i].putDown(i, event.hit.hitPoint, BeerBaseState.NONE)
+
               break
           }
         }

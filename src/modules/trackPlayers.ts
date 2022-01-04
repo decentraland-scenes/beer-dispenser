@@ -11,11 +11,11 @@ getUserData().then((user) => {
   thisPlayer = user?.userId
 })
 
-// getConnectedPlayers().then(async (players) => {
-//   players.forEach(async (player) => {
-//     playersCarryingBeer.push({ id: player.userId, beer: undefined })
-//   })
-// })
+getConnectedPlayers().then(async (players) => {
+  players.forEach(async (player) => {
+    playersCarryingBeer.push({ id: player.userId, beer: undefined })
+  })
+})
 
 onEnterSceneObservable.add((player) => {
   playersCarryingBeer.push({ id: player.userId })

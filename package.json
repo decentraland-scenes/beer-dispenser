@@ -15,10 +15,9 @@
   },
   "dependencies": {
     "@dcl/ecs-scene-utils": "^1.6.1",
-    "@dcl/kernel": "https://sdk-team-cdn.decentraland.org/@dcl/kernel/branch/feat/skip-avatar-selection-in-preview/dcl-kernel-1.0.0-1183047959.commit-d5accd1.tgz",
     "@dcl/ui-scene-utils": "^1.7.1"
   },
-  "bundleDependencies": [
+  "bundledDependencies": [
     "@dcl/ecs-scene-utils",
     "@dcl/ui-scene-utils"
   ]

@@ -40,14 +40,15 @@ export class BeerGlass extends Entity {
     public rotatePosition: number
   ) {
     super()
+    this.addComponent(new Transform({ position: position }))
     engine.addEntity(this)
 
     this.id = id
 
     this.glass = new Entity()
-
+    this.glass.addComponent(new Transform())
     this.glass.addComponent(model)
-    this.glass.addComponent(new Transform({ position: position }))
+
     engine.addEntity(this.glass)
     this.glass.setParent(this)
     this.lastPos = position
@@ -86,7 +87,7 @@ export class BeerGlass extends Entity {
       )
     )
 
-    /// DEBUG
+    /// FOR DEBUG: NUMBERS ON BEERS
     let label = new Entity()
     label.setParent(this.glass)
     label.addComponent(
@@ -148,6 +149,7 @@ export class BeerGlass extends Entity {
     } else {
       log('PICKING UP FOR ME', playerId)
       this.setParent(Attachable.FIRST_PERSON_CAMERA)
+      this.addComponentOrReplace(new Transform())
 
       this.addComponentOrReplace(
         new utils.Delay(100, () => {
@@ -162,15 +164,22 @@ export class BeerGlass extends Entity {
   }
 
   putDown(
-    // id: number,
     placePosition: Vector3,
     beerBaseState?: BeerBaseState,
     playerId?: string
   ): void {
-    this.setParent(engine.rootEntity)
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
+    } else {
+      this.setParent(null)
     }
+
+    this.addComponentOrReplace(
+      new Transform({
+        position: placePosition,
+        rotation: Quaternion.Zero(),
+      })
+    )
     putDownSound.getComponent(AudioSource).playOnce()
     Player.holdingBeerGlass = false
 
@@ -178,13 +187,8 @@ export class BeerGlass extends Entity {
       this.beerBaseState = beerBaseState
     }
 
-    this.glass.getComponent(Transform).position = placePosition
+    this.glass.getComponent(Transform).position = Vector3.Zero()
     this.glass.getComponent(Transform).rotation = Quaternion.Zero()
-    // sceneMessageBus.emit('BeerGlassPutDown', {
-    //   id: id,
-    //   position: placePosition,
-    //   beerState: beerBaseState,
-    // })
 
     if (playerId) {
       let index: number | undefined = undefined
@@ -206,7 +210,11 @@ export class BeerGlass extends Entity {
 
   reset() {
     this.setParent(null)
-    this.glass.getComponent(Transform).position = this.lastPos
+    if (this.hasComponent(AttachToAvatar)) {
+      this.removeComponent(AttachToAvatar)
+    }
+    this.getComponent(Transform).position = this.lastPos
+    this.glass.getComponent(Transform).position = Vector3.Zero()
     this.beerBaseState = BeerBaseState.NONE
     this.isFull = false
   }
@@ -234,19 +242,7 @@ export class BeerGlass extends Entity {
 }
 
 sceneMessageBus.on('BeerGlassPickedUp', (beerGlassState: BeerGlassState) => {
-  beerGlasses[beerGlassState.id].pickup(
-    // beerGlassState.id,
-    beerGlassState.carryingPlayer
-  )
-
-  //   beerGlasses[beerGlassState.id]
-  //     .getComponent(Transform)
-  //     .position.set(
-  //       beerGlassState.position.x,
-  //       beerGlassState.position.y,
-  //       beerGlassState.position.z
-  //     )
-  //   beerGlasses[beerGlassState.id].beerBaseState = BeerBaseState.NONE
+  beerGlasses[beerGlassState.id].pickup(beerGlassState.carryingPlayer)
 
   log(
     'PICKED UP GLASS ',
@@ -260,7 +256,6 @@ sceneMessageBus.on('BeerGlassPickedUp', (beerGlassState: BeerGlassState) => {
 
 sceneMessageBus.on('BeerGlassPutDown', (beerGlassState: BeerGlassState) => {
   beerGlasses[beerGlassState.id].putDown(
-    // beerGlassState.id,
     beerGlassState.position,
     beerGlassState.beerState,
     beerGlassState.carryingPlayer
@@ -275,18 +270,6 @@ sceneMessageBus.on('BeerGlassPutDown', (beerGlassState: BeerGlassState) => {
     ' beer state ',
     beerGlassState.beerState
   )
-
-  //   beerGlasses[beerGlassState.id].beerBaseState = beerGlassState.beerState
-  //   beerGlasses[beerGlassState.id]
-  //     .getComponent(Transform)
-  //     .rotation.set(0, 0, 0, 1)
-  //   beerGlasses[beerGlassState.id]
-  //     .getComponent(Transform)
-  //     .position.set(
-  //       beerGlassState.position.x,
-  //       beerGlassState.position.y,
-  //       beerGlassState.position.z
-  //     )
 })
 
 sceneMessageBus.on('BeerGlassDrink', (beerGlassState: BeerGlassState) => {
@@ -316,7 +299,7 @@ sceneMessageBus.on('BeerGlassPourAnim', (beerGlassState: BeerGlassState) => {
 // Beer glasses
 const beerGlassShape = new GLTFShape('models/beerGlass.glb')
 
-// NOTE: We're matching the beer object's position in the array with the id - this is not good
+// NOTE: We're matching the beer object's position in the array with the id
 const beerGlass1 = new BeerGlass(
   0,
   beerGlassShape,
