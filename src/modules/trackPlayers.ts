@@ -2,39 +2,73 @@ import { getUserData } from '@decentraland/Identity'
 import { getConnectedPlayers } from '@decentraland/Players'
 import { BeerGlass } from './beerGlass'
 
-export let playersCarryingBeer: { id: string; beer?: BeerGlass | undefined }[] =
-  []
+export let players: {
+  userId: string
+  isCurrentPlayer: boolean
+  holdingBeerGlass: boolean
+  beer?: BeerGlass | undefined
+}[] = []
 
-export let thisPlayer: string | undefined
+export let thisPlayerIndex: number
 
 getUserData().then((user) => {
-  thisPlayer = user?.userId
-})
+  if (!user) return
 
-getConnectedPlayers().then(async (players) => {
-  players.forEach(async (player) => {
-    playersCarryingBeer.push({ id: player.userId, beer: undefined })
-  })
-})
-
-onEnterSceneObservable.add((player) => {
-  playersCarryingBeer.push({ id: player.userId })
-
-  log('stranger ENTERED: ', player, ' FULL LIST: ', playersCarryingBeer)
-})
-
-onLeaveSceneObservable.add((player) => {
-  log('USER LEFT: ', player.userId)
-
-  let index: number | undefined = undefined
-  for (let i = 0; i < playersCarryingBeer.length; i++) {
-    if (playersCarryingBeer[i].id === player.userId) {
+  let index = undefined
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].userId === user?.userId) {
       index = i
     }
   }
-  if (index) {
-    playersCarryingBeer[index].beer?.reset()
+  if (index !== undefined) {
+    players[index].isCurrentPlayer = true
+    thisPlayerIndex = index
+  } else {
+    let newArrayLength = players.push({
+      userId: user.userId,
+      isCurrentPlayer: true,
+      holdingBeerGlass: false,
+      beer: undefined,
+    })
+    thisPlayerIndex = newArrayLength - 1
+  }
 
-    playersCarryingBeer.splice(index, 1)
+  log('PLAYER ID: ', thisPlayerIndex, players[thisPlayerIndex])
+})
+
+getConnectedPlayers().then(async (connectedPlayers) => {
+  connectedPlayers.forEach(async (player) => {
+    players.push({
+      userId: player.userId,
+      isCurrentPlayer: false,
+      holdingBeerGlass: false,
+      beer: undefined,
+    })
+  })
+})
+
+onPlayerConnectedObservable.add((player) => {
+  players.push({
+    userId: player.userId,
+    isCurrentPlayer: false,
+    holdingBeerGlass: false,
+  })
+
+  log('stranger ENTERED: ', player, ' FULL LIST: ', players)
+})
+
+onPlayerDisconnectedObservable.add((player) => {
+  log('USER LEFT: ', player.userId)
+
+  let index: number | undefined = undefined
+  for (let i = 0; i < players.length; i++) {
+    if (players[i].userId === player.userId) {
+      index = i
+    }
+  }
+  if (index !== undefined) {
+    players[index].beer?.reset()
+
+    players.splice(index, 1)
   }
 })

@@ -1,10 +1,10 @@
 import { BeerBaseState, beerGlasses } from './modules/beerGlass'
 import { Sound } from './modules/sound'
-import { Player } from './player'
+
 import * as ui from '@dcl/ui-scene-utils'
 import { beerDispenser } from './modules/tap'
 import { sceneMessageBus } from './messageBus'
-import { playersCarryingBeer, thisPlayer } from './modules/trackPlayers'
+import { players, thisPlayerIndex } from './modules/trackPlayers'
 
 // Base
 const base = new Entity()
@@ -24,70 +24,67 @@ engine.addEntity(tables)
 const input = Input.instance
 
 input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
-  log('HOLDING BEER? ', Player.holdingBeerGlass, event.hit)
-  if (Player.holdingBeerGlass && event.hit) {
+  if (thisPlayerIndex === undefined) return
+  log('HOLDING BEER? ', players[thisPlayerIndex].holdingBeerGlass, event.hit)
+  if (
+    players[thisPlayerIndex].holdingBeerGlass &&
+    players[thisPlayerIndex].beer &&
+    event.hit
+  ) {
     if (event.hit.normal.y > 0.99) {
-      for (let i = 0; i < playersCarryingBeer.length; i++) {
-        // Check if item has a parent
-        if (
-          playersCarryingBeer[i].beer !== undefined &&
-          playersCarryingBeer[i].id === thisPlayer
-        ) {
-          let beerPosition: Vector3
-          switch (event.hit.meshName) {
-            case 'redBase_collider':
-              beerPosition = beerDispenser
-                .getComponent(Transform)
-                .position.clone()
-                .subtract(new Vector3(0.368, -0.02, 0.31))
-              sceneMessageBus.emit('BeerGlassPutDown', {
-                id: playersCarryingBeer[i].beer!.id,
-                position: beerPosition,
-                beerState: BeerBaseState.RED_BEER,
-                carryingPlayer: thisPlayer,
-              })
-              break
-            case 'yellowBase_collider':
-              beerPosition = beerDispenser
-                .getComponent(Transform)
-                .position.clone()
-                .subtract(new Vector3(0, -0.02, 0.31))
+      let beerPosition: Vector3
+      switch (event.hit.meshName) {
+        case 'redBase_collider':
+          beerPosition = beerDispenser
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(0.368, -0.02, 0.31))
+          sceneMessageBus.emit('BeerGlassPutDown', {
+            id: players[thisPlayerIndex].beer!.id,
+            position: beerPosition,
+            beerState: BeerBaseState.RED_BEER,
+            carryingPlayer: players[thisPlayerIndex].userId,
+          })
+          break
+        case 'yellowBase_collider':
+          beerPosition = beerDispenser
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(0, -0.02, 0.31))
 
-              sceneMessageBus.emit('BeerGlassPutDown', {
-                id: playersCarryingBeer[i].beer!.id,
-                position: beerPosition,
-                beerState: BeerBaseState.YELLOW_BEER,
-                carryingPlayer: thisPlayer,
-              })
+          sceneMessageBus.emit('BeerGlassPutDown', {
+            id: players[thisPlayerIndex].beer!.id,
+            position: beerPosition,
+            beerState: BeerBaseState.YELLOW_BEER,
+            carryingPlayer: players[thisPlayerIndex].userId,
+          })
 
-              break
-            case 'greenBase_collider':
-              beerPosition = beerDispenser
-                .getComponent(Transform)
-                .position.clone()
-                .subtract(new Vector3(-0.368, -0.02, 0.31))
+          break
+        case 'greenBase_collider':
+          beerPosition = beerDispenser
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(-0.368, -0.02, 0.31))
 
-              sceneMessageBus.emit('BeerGlassPutDown', {
-                id: playersCarryingBeer[i].beer!.id,
-                position: beerPosition,
-                beerState: BeerBaseState.GREEN_BEER,
-                carryingPlayer: thisPlayer,
-              })
+          sceneMessageBus.emit('BeerGlassPutDown', {
+            id: players[thisPlayerIndex].beer!.id,
+            position: beerPosition,
+            beerState: BeerBaseState.GREEN_BEER,
+            carryingPlayer: players[thisPlayerIndex].userId,
+          })
 
-              break
-            default:
-              log('DEFAULT')
+          break
+        default:
+          log('DEFAULT')
 
-              sceneMessageBus.emit('BeerGlassPutDown', {
-                id: playersCarryingBeer[i].beer!.id,
-                position: event.hit.hitPoint,
-                beerState: BeerBaseState.NONE,
-                carryingPlayer: thisPlayer,
-              })
+          sceneMessageBus.emit('BeerGlassPutDown', {
+            id: players[thisPlayerIndex].beer!.id,
+            position: event.hit.hitPoint,
+            beerState: BeerBaseState.NONE,
+            carryingPlayer: players[thisPlayerIndex].userId,
+          })
 
-              break
-          }
-        }
+          break
       }
     } else {
       noSign.show(1)
@@ -97,14 +94,18 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
 })
 
 input.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
-  if (Player.holdingBeerGlass) {
-    for (let i = 0; i < beerGlasses.length; i++) {
-      // Check if item has a parent
-      if (beerGlasses[i].getParent()?.alive && beerGlasses[i].isFull) {
-        beerGlasses[i].drink(i)
-      }
-    }
+  if (
+    players[thisPlayerIndex].holdingBeerGlass &&
+    players[thisPlayerIndex].beer &&
+    players[thisPlayerIndex].beer?.isFull
+  ) {
+    // for (let i = 0; i < beerGlasses.length; i++) {
+    // Check if item has a parent
+    //   if (beerGlasses[i].getParent()?.alive && beerGlasses[i].isFull) {
+    players[thisPlayerIndex].beer!.drink()
+    //   }
   }
+  //   }
 })
 
 let noSign = new ui.CenterImage(
