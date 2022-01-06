@@ -123,25 +123,27 @@ export class BeerGlass extends Entity {
 
     pickUpSound.getComponent(AudioSource).playOnce()
 
-    if (playerId !== thisPlayer) {
-      log('PICKING UP FOR ', playerId)
-      this.addComponentOrReplace(
-        new AttachToAvatar({
-          avatarId: playerId,
-          anchorPointId: AttachToAvatarAnchorPointId.NameTag,
-        })
-      )
-    } else {
-      log('PICKING UP FOR ME', playerId)
-      this.setParent(Attachable.FIRST_PERSON_CAMERA)
-      this.addComponentOrReplace(new Transform())
-
+    if (playerId === thisPlayer) {
       this.addComponentOrReplace(
         new utils.Delay(100, () => {
           Player.holdingBeerGlass = true
         })
       )
     }
+
+    log('PICKING UP FOR ', playerId)
+    this.addComponentOrReplace(
+      new AttachToAvatar({
+        avatarId: playerId,
+        anchorPointId: AttachToAvatarAnchorPointId.NameTag,
+      })
+    )
+    // } else {
+    //   log('PICKING UP FOR ME', playerId)
+    //   this.setParent(Attachable.FIRST_PERSON_CAMERA)
+    //   this.addComponentOrReplace(new Transform())
+
+    // }
 
     this.glass.getComponent(Transform).position = this.holdPosition
     this.glass
@@ -181,8 +183,8 @@ export class BeerGlass extends Entity {
   ): void {
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
-    } else {
-      this.setParent(null)
+      // } else {
+      //   this.setParent(null)
     }
 
     this.addComponentOrReplace(
