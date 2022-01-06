@@ -122,26 +122,26 @@ export class BeerGlass extends Entity {
     }
 
     this.beerBaseState = BeerBaseState.NONE
-    this.setParent(null)
+    // this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
     }
 
     pickUpSound.getComponent(AudioSource).playOnce()
 
-    if (playerId !== players[thisPlayerIndex].userId) {
-      log('PICKING UP FOR ', playerId)
-      this.addComponentOrReplace(
-        new AttachToAvatar({
-          avatarId: playerId,
-          anchorPointId: AttachToAvatarAnchorPointId.NameTag,
-        })
-      )
-    } else {
-      log('PICKING UP FOR ME', playerId)
-      this.setParent(Attachable.FIRST_PERSON_CAMERA)
-      this.addComponentOrReplace(new Transform())
-    }
+    // if (playerId !== players[thisPlayerIndex].userId) {
+    log('PICKING UP FOR ', playerId)
+    this.addComponentOrReplace(
+      new AttachToAvatar({
+        avatarId: playerId,
+        anchorPointId: AttachToAvatarAnchorPointId.NameTag,
+      })
+    )
+    // } else {
+    //   log('PICKING UP FOR ME', playerId)
+    //   this.setParent(Attachable.FIRST_PERSON_CAMERA)
+    //   this.addComponentOrReplace(new Transform())
+    // }
 
     log('PICKING UP FOR ', playerId)
     this.addComponentOrReplace(
@@ -237,7 +237,7 @@ export class BeerGlass extends Entity {
   }
 
   reset() {
-    this.setParent(null)
+    // this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
     }
