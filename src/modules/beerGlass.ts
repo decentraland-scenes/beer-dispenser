@@ -1,7 +1,6 @@
 import * as utils from '@dcl/ecs-scene-utils'
 import { Sound } from './sound'
-import { Player } from '../player'
-import { playersCarryingBeer, thisPlayer } from './trackPlayers'
+import { players, thisPlayerIndex } from './trackPlayers'
 import { sceneMessageBus } from 'src/messageBus'
 
 // Track player's state
@@ -71,11 +70,15 @@ export class BeerGlass extends Entity {
     this.glass.addComponent(
       new OnPointerDown(
         (e) => {
-          if (!Player.holdingBeerGlass) {
+          if (
+            thisPlayerIndex !== undefined &&
+            !players[thisPlayerIndex].holdingBeerGlass
+          ) {
             sceneMessageBus.emit('BeerGlassPickedUp', {
               id: this.id,
               position: this.holdPosition,
-              carryingPlayer: thisPlayer,
+              carryingPlayer: players[thisPlayerIndex].userId,
+              beerState: BeerBaseState.NONE,
             })
           }
         },
@@ -114,7 +117,10 @@ export class BeerGlass extends Entity {
   }
 
   public pickup(playerId: string): void {
-    this.lastPos = this.getComponent(Transform).position
+    if (this.hasComponent(Transform)) {
+      this.lastPos = this.getComponent(Transform).position
+    }
+
     this.beerBaseState = BeerBaseState.NONE
     this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
@@ -123,7 +129,7 @@ export class BeerGlass extends Entity {
 
     pickUpSound.getComponent(AudioSource).playOnce()
 
-    if (playerId !== thisPlayer) {
+    if (playerId !== players[thisPlayerIndex].userId) {
       log('PICKING UP FOR ', playerId)
       this.addComponentOrReplace(
         new AttachToAvatar({
@@ -135,12 +141,6 @@ export class BeerGlass extends Entity {
       log('PICKING UP FOR ME', playerId)
       this.setParent(Attachable.FIRST_PERSON_CAMERA)
       this.addComponentOrReplace(new Transform())
-
-      this.addComponentOrReplace(
-        new utils.Delay(100, () => {
-          Player.holdingBeerGlass = true
-        })
-      )
     }
 
     this.glass.getComponent(Transform).position = this.holdPosition
@@ -149,27 +149,33 @@ export class BeerGlass extends Entity {
       .rotate(Vector3.Right(), this.rotatePosition)
 
     let index: number | undefined = undefined
-    for (let i = 0; i < playersCarryingBeer.length; i++) {
-      if (playersCarryingBeer[i].id === playerId) {
+    for (let i = 0; i < players.length; i++) {
+      if (players[i].userId === playerId) {
         index = i
       }
 
-      // someone stole the beer from your hands
-      if (
-        playersCarryingBeer[i] &&
-        playersCarryingBeer[i].id === thisPlayer &&
-        playersCarryingBeer[i].beer &&
-        playersCarryingBeer[i].beer!.id === this.id
-      ) {
-        Player.holdingBeerGlass = false
+      // someone stole the beer from someone else's hands
+      if (players[i].beer && players[i].beer!.id === this.id) {
+        players[i].holdingBeerGlass = false
+        players[i].beer = undefined
       }
     }
-    if (index) {
-      playersCarryingBeer[index].beer = this
+    if (index !== undefined && index === thisPlayerIndex) {
+      this.addComponentOrReplace(
+        new utils.Delay(100, () => {
+          players[index!].holdingBeerGlass = true
+          players[index!].beer = this
+        })
+      )
+    } else if (index !== undefined) {
+      players[index].holdingBeerGlass = true
+      players[index].beer = this
     } else {
-      playersCarryingBeer.push({
-        id: playerId,
+      players.push({
+        userId: playerId,
+        holdingBeerGlass: true,
         beer: this,
+        isCurrentPlayer: false,
       })
     }
   }
@@ -198,35 +204,22 @@ export class BeerGlass extends Entity {
 
     this.beerBaseState = beerBaseState
 
-    // you put the beer down
-    if (playerId === thisPlayer) {
-      Player.holdingBeerGlass = false
-    }
-
     let index: number | undefined = undefined
-    for (let i = 0; i < playersCarryingBeer.length; i++) {
-      if (playersCarryingBeer[i].id === playerId) {
-        index = i
-      }
-
-      // someone stole the beer from your hands & put it down
+    for (let i = 0; i < players.length; i++) {
       if (
-        playersCarryingBeer[i] &&
-        playersCarryingBeer[i].id === thisPlayer &&
-        playersCarryingBeer[i].beer &&
-        playersCarryingBeer[i].beer!.id === this.id
+        players[i].userId === playerId ||
+        // someone stole the beer from someone's hands & put it down
+        (players[i].beer && players[i].beer!.id === this.id)
       ) {
-        Player.holdingBeerGlass = false
+        players[i].holdingBeerGlass = false
+        players[i].beer = undefined
       }
-    }
-    if (index) {
-      playersCarryingBeer[index].beer = undefined
     }
   }
 
-  drink(id: number): void {
+  drink(): void {
     swallowSound.getComponent(AudioSource).playOnce()
-    sceneMessageBus.emit('BeerGlassDrink', { id: id })
+    sceneMessageBus.emit('BeerGlassDrink', { id: this.id })
   }
 
   reset() {
@@ -244,18 +237,27 @@ export class BeerGlass extends Entity {
     this.glass.getComponent(Transform).rotation = Quaternion.Zero()
     this.beerBaseState = BeerBaseState.NONE
     this.isFull = false
-    Player.holdingBeerGlass = false
+    for (let i = 0; i < players.length; i++) {
+      if (players[i].beer && players[i].beer!.id === this.id) {
+        players[i].holdingBeerGlass = false
+        players[i].beer = undefined
+      }
+    }
   }
 
   addPointerDown() {
     this.glass.addComponent(
       new OnPointerDown(
-        () => {
-          if (!Player.holdingBeerGlass) {
+        (e) => {
+          if (
+            thisPlayerIndex !== undefined &&
+            !players[thisPlayerIndex].holdingBeerGlass
+          ) {
             sceneMessageBus.emit('BeerGlassPickedUp', {
               id: this.id,
               position: this.holdPosition,
-              carryingPlayer: thisPlayer,
+              carryingPlayer: players[thisPlayerIndex].userId,
+              beerState: BeerBaseState.NONE,
             })
           }
         },
