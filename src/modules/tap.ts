@@ -48,24 +48,29 @@ export class Tap extends Entity {
   playPourAnim() {
     beerPumpSound.getComponent(AudioSource).playOnce()
 
+    this.getComponent(Animator).getClip('Pour').play()
+    this.removeComponent(OnPointerDown)
+    this.addComponent(
+      new utils.Delay(2500, () => {
+        this.addPointerDown()
+      })
+    )
+
     for (let i = 0; i < this.beerGlasses.length; i++) {
       if (this.beerGlasses[i].beerBaseState == this.beerBaseState) {
-        this.beerGlasses[i].playPourAnim()
+        sceneMessageBus.emit('BeerGlassPourAnim', {
+          id: this.beerGlasses[i].id,
+          position: this.beerGlasses[i].holdPosition,
+        })
       }
     }
-    sceneMessageBus.emit('TapPourAnim', { id: this.id })
-  }
-
-  stopAnimations() {
-    this.getComponent(Animator).getClip('Blank').stop()
-    this.getComponent(Animator).getClip('Pour').stop()
   }
 
   addPointerDown() {
     this.addComponent(
       new OnPointerDown(
         () => {
-          this.playPourAnim()
+          sceneMessageBus.emit('TapPourAnim', { id: this.id })
         },
         {
           button: ActionButton.PRIMARY,
@@ -78,14 +83,7 @@ export class Tap extends Entity {
 }
 
 sceneMessageBus.on('TapPourAnim', (tapID: TapID) => {
-  taps[tapID.id].stopAnimations()
-  taps[tapID.id].getComponent(Animator).getClip('Pour').play()
-  taps[tapID.id].removeComponent(OnPointerDown)
-  taps[tapID.id].addComponent(
-    new utils.Delay(2500, () => {
-      taps[tapID.id].addPointerDown()
-    })
-  )
+  taps[tapID.id].playPourAnim()
 })
 
 // Taps

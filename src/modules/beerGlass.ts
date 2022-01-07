@@ -26,10 +26,10 @@ const swallowSound = new Sound(new AudioClip('sounds/swallow.mp3'))
 
 export class BeerGlass extends Entity {
   public id: number
+  public glass: Entity
   public isFull: boolean = false
   public beerBaseState: BeerBaseState = BeerBaseState.NONE
   public lastPos: Vector3
-  public glass: Entity
 
   constructor(
     id: number,
@@ -43,14 +43,13 @@ export class BeerGlass extends Entity {
     engine.addEntity(this)
 
     this.id = id
+    this.lastPos = position
 
     this.glass = new Entity()
     this.glass.addComponent(new Transform())
     this.glass.addComponent(model)
-
     engine.addEntity(this.glass)
     this.glass.setParent(this)
-    this.lastPos = position
 
     this.glass.addComponent(new Animator())
     this.glass
@@ -90,7 +89,7 @@ export class BeerGlass extends Entity {
       )
     )
 
-    /// FOR DEBUG: NUMBERS ON BEERS
+    /// FOR DEBUG: DISPLAY NUMBERS ON BEERS
     let label = new Entity()
     label.setParent(this.glass)
     label.addComponent(
@@ -103,59 +102,35 @@ export class BeerGlass extends Entity {
   }
 
   playPourAnim() {
-    sceneMessageBus.emit('BeerGlassPourAnim', {
-      id: this.id,
-      position: this.holdPosition,
-    })
-  }
-
-  stopAnimations() {
-    this.glass.getComponent(Animator).getClip('Blank').stop()
-    this.glass.getComponent(Animator).getClip('PourRed').stop()
-    this.glass.getComponent(Animator).getClip('PourYellow').stop()
-    this.glass.getComponent(Animator).getClip('PourGreen').stop()
+    this.isFull = true
+    this.glass.getComponent(Animator).getClip(this.beerBaseState).play()
+    this.glass.removeComponent(OnPointerDown)
+    this.addComponent(
+      new utils.Delay(2500, () => {
+        this.addPointerDown()
+      })
+    )
   }
 
   public pickup(playerId: string): void {
     if (this.hasComponent(Transform)) {
       this.lastPos = this.getComponent(Transform).position
     }
-
-    this.beerBaseState = BeerBaseState.NONE
-    // this.setParent(null)
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
     }
 
+    this.beerBaseState = BeerBaseState.NONE
+
+    log('PICKING UP FOR ', playerId)
+    this.addComponentOrReplace(
+      new AttachToAvatar({
+        avatarId: playerId,
+        anchorPointId: AttachToAvatarAnchorPointId.NameTag,
+      })
+    )
+
     pickUpSound.getComponent(AudioSource).playOnce()
-
-    // if (playerId !== players[thisPlayerIndex].userId) {
-    log('PICKING UP FOR ', playerId)
-    this.addComponentOrReplace(
-      new AttachToAvatar({
-        avatarId: playerId,
-        anchorPointId: AttachToAvatarAnchorPointId.NameTag,
-      })
-    )
-    // } else {
-    //   log('PICKING UP FOR ME', playerId)
-    //   this.setParent(Attachable.FIRST_PERSON_CAMERA)
-    //   this.addComponentOrReplace(new Transform())
-    // }
-
-    log('PICKING UP FOR ', playerId)
-    this.addComponentOrReplace(
-      new AttachToAvatar({
-        avatarId: playerId,
-        anchorPointId: AttachToAvatarAnchorPointId.NameTag,
-      })
-    )
-    // } else {
-    //   log('PICKING UP FOR ME', playerId)
-    //   this.setParent(Attachable.FIRST_PERSON_CAMERA)
-    //   this.addComponentOrReplace(new Transform())
-
-    // }
 
     this.glass.getComponent(Transform).position = this.holdPosition
     this.glass
@@ -168,13 +143,14 @@ export class BeerGlass extends Entity {
         index = i
       }
 
-      // someone stole the beer from someone else's hands
+      // if beer was in someone else's hand, remove it
       if (players[i].beer && players[i].beer!.id === this.id) {
         players[i].holdingBeerGlass = false
         players[i].beer = undefined
       }
     }
     if (index !== undefined && index === thisPlayerIndex) {
+      // picked up by current player (delay slightly to prevent picking and dropping simultaneously)
       this.addComponentOrReplace(
         new utils.Delay(100, () => {
           players[index!].holdingBeerGlass = true
@@ -182,9 +158,11 @@ export class BeerGlass extends Entity {
         })
       )
     } else if (index !== undefined) {
+      // picked up by other player tracked by the scene
       players[index].holdingBeerGlass = true
       players[index].beer = this
     } else {
+      // picked up by other player NOT tracked by the scene yet
       players.push({
         userId: playerId,
         holdingBeerGlass: true,
@@ -199,10 +177,9 @@ export class BeerGlass extends Entity {
     beerBaseState: BeerBaseState,
     playerId: string
   ): void {
+    // TODO: remove AttachToAvatar should be redundant
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
-      // } else {
-      //   this.setParent(null)
     }
 
     this.addComponentOrReplace(
@@ -211,18 +188,17 @@ export class BeerGlass extends Entity {
         rotation: Quaternion.Zero(),
       })
     )
-    putDownSound.getComponent(AudioSource).playOnce()
-
     this.glass.getComponent(Transform).position = Vector3.Zero()
     this.glass.getComponent(Transform).rotation = Quaternion.Zero()
 
+    putDownSound.getComponent(AudioSource).playOnce()
     this.beerBaseState = beerBaseState
 
     let index: number | undefined = undefined
     for (let i = 0; i < players.length; i++) {
       if (
         players[i].userId === playerId ||
-        // someone stole the beer from someone's hands & put it down
+        // in case scene thinks beer was in someone else's hand, remove it too
         (players[i].beer && players[i].beer!.id === this.id)
       ) {
         players[i].holdingBeerGlass = false
@@ -233,11 +209,13 @@ export class BeerGlass extends Entity {
 
   drink(): void {
     swallowSound.getComponent(AudioSource).playOnce()
-    sceneMessageBus.emit('BeerGlassDrink', { id: this.id })
+
+    this.isFull = false
+    this.glass.getComponent(Animator).getClip('Blank').play()
   }
 
   reset() {
-    // this.setParent(null)
+    // TODO: remove AttachToAvatar should be redundant
     if (this.hasComponent(AttachToAvatar)) {
       this.removeComponent(AttachToAvatar)
     }
@@ -304,6 +282,7 @@ sceneMessageBus.on('BeerGlassPutDown', (beerGlassState: BeerGlassState) => {
     beerGlassState.beerState,
     beerGlassState.carryingPlayer
   )
+
   log(
     'PUTTING DOWN GLASS ',
     beerGlassState.id,
@@ -317,27 +296,11 @@ sceneMessageBus.on('BeerGlassPutDown', (beerGlassState: BeerGlassState) => {
 })
 
 sceneMessageBus.on('BeerGlassDrink', (beerGlassState: BeerGlassState) => {
-  beerGlasses[beerGlassState.id].isFull = false
-  beerGlasses[beerGlassState.id].stopAnimations()
-  beerGlasses[beerGlassState.id].glass
-    .getComponent(Animator)
-    .getClip('Blank')
-    .play()
+  beerGlasses[beerGlassState.id].drink()
 })
 
 sceneMessageBus.on('BeerGlassPourAnim', (beerGlassState: BeerGlassState) => {
-  beerGlasses[beerGlassState.id].isFull = true
-  beerGlasses[beerGlassState.id].stopAnimations()
-  beerGlasses[beerGlassState.id].glass
-    .getComponent(Animator)
-    .getClip(beerGlasses[beerGlassState.id].beerBaseState)
-    .play()
-  beerGlasses[beerGlassState.id].glass.removeComponent(OnPointerDown)
-  beerGlasses[beerGlassState.id].addComponent(
-    new utils.Delay(2500, () => {
-      beerGlasses[beerGlassState.id].addPointerDown()
-    })
-  )
+  beerGlasses[beerGlassState.id].playPourAnim()
 })
 
 // Beer glasses
