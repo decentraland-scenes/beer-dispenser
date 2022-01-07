@@ -113,16 +113,13 @@ export class BeerGlass extends Entity {
   }
 
   public pickup(playerId: string): void {
+    log('PICKING UP FOR ', playerId)
     if (this.hasComponent(Transform)) {
       this.lastPos = this.getComponent(Transform).position
-    }
-    if (this.hasComponent(AttachToAvatar)) {
-      this.removeComponent(AttachToAvatar)
     }
 
     this.beerBaseState = BeerBaseState.NONE
 
-    log('PICKING UP FOR ', playerId)
     this.addComponentOrReplace(
       new AttachToAvatar({
         avatarId: playerId,
@@ -306,75 +303,77 @@ sceneMessageBus.on('BeerGlassPourAnim', (beerGlassState: BeerGlassState) => {
 // Beer glasses
 const beerGlassShape = new GLTFShape('models/beerGlass.glb')
 
+const beerHoldPosition = new Vector3(0, -0.75, 0.4)
+
 // NOTE: We're matching the beer object's position in the array with the id
 const beerGlass1 = new BeerGlass(
   0,
   beerGlassShape,
   new Vector3(8.3, 1.25, 8),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass2 = new BeerGlass(
   1,
   beerGlassShape,
   new Vector3(7.8, 1.25, 8.3),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass3 = new BeerGlass(
   2,
   beerGlassShape,
   new Vector3(1.86, 0.8, 13.4),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass4 = new BeerGlass(
   3,
   beerGlassShape,
   new Vector3(2.3, 0.8, 14),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass5 = new BeerGlass(
   4,
   beerGlassShape,
   new Vector3(13.7, 0.8, 13.8),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass6 = new BeerGlass(
   5,
   beerGlassShape,
   new Vector3(13.9, 0.8, 14.3),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass7 = new BeerGlass(
   6,
   beerGlassShape,
   new Vector3(14.5, 0.8, 2.5),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass8 = new BeerGlass(
   7,
   beerGlassShape,
   new Vector3(13.7, 0.8, 1.9),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass9 = new BeerGlass(
   8,
   beerGlassShape,
   new Vector3(2.4, 0.8, 1.5),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 const beerGlass10 = new BeerGlass(
   9,
   beerGlassShape,
   new Vector3(1.8, 0.8, 2.3),
-  new Vector3(0, -0.4, 0.5),
+  beerHoldPosition,
   -10
 )
 
