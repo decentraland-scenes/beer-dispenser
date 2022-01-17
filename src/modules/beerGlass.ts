@@ -174,11 +174,6 @@ export class BeerGlass extends Entity {
     beerBaseState: BeerBaseState,
     playerId: string
   ): void {
-    // TODO: remove AttachToAvatar should be redundant
-    if (this.hasComponent(AttachToAvatar)) {
-      this.removeComponent(AttachToAvatar)
-    }
-
     this.addComponentOrReplace(
       new Transform({
         position: placePosition,
@@ -212,10 +207,6 @@ export class BeerGlass extends Entity {
   }
 
   reset() {
-    // TODO: remove AttachToAvatar should be redundant
-    if (this.hasComponent(AttachToAvatar)) {
-      this.removeComponent(AttachToAvatar)
-    }
     this.addComponentOrReplace(
       new Transform({
         position: this.lastPos,
