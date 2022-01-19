@@ -1,12 +1,14 @@
-import * as utils from "@dcl/ecs-scene-utils"
-import { BeerBaseState, BeerGlass, beerGlasses} from "beerGlass"
-import { Sound } from "./sound"
-import { sceneMessageBus } from "../game"
+import * as utils from '@dcl/ecs-scene-utils'
+import { BeerBaseState, BeerGlass, beerGlasses } from 'beerGlass'
+import { sceneMessageBus } from 'src/messageBus'
+import { Sound } from './sound'
 
 // Dispenser
 export const beerDispenser = new Entity()
-beerDispenser.addComponent(new GLTFShape("models/beerDispenser.glb"))
-beerDispenser.addComponent(new Transform({ position: new Vector3(8, 1.25, 7.5) }))
+beerDispenser.addComponent(new GLTFShape('models/beerDispenser.glb'))
+beerDispenser.addComponent(
+  new Transform({ position: new Vector3(8, 1.25, 7.5) })
+)
 beerDispenser.getComponent(Transform).rotate(Vector3.Up(), 180)
 engine.addEntity(beerDispenser)
 
@@ -16,11 +18,15 @@ type TapID = {
 }
 
 // Sound
-const beerPumpSound = new Sound(new AudioClip("sounds/beerPump.mp3"))
+const beerPumpSound = new Sound(new AudioClip('sounds/beerPump.mp3'))
 
 export class Tap extends Entity {
-
-  constructor(public id: number, model: GLTFShape, public beerGlasses: BeerGlass[], public beerBaseState: BeerBaseState) {
+  constructor(
+    public id: number,
+    model: GLTFShape,
+    public beerGlasses: BeerGlass[],
+    public beerBaseState: BeerBaseState
+  ) {
     super()
     engine.addEntity(this)
     this.addComponent(model)
@@ -28,9 +34,13 @@ export class Tap extends Entity {
     this.beerGlasses = beerGlasses
 
     this.addComponent(new Animator())
-    this.getComponent(Animator).addClip(new AnimationState("Blank", { looping: false }))
-    this.getComponent(Animator).addClip(new AnimationState("Pour", { looping: false }))
-    this.getComponent(Animator).getClip("Blank").play()
+    this.getComponent(Animator).addClip(
+      new AnimationState('Blank', { looping: false })
+    )
+    this.getComponent(Animator).addClip(
+      new AnimationState('Pour', { looping: false })
+    )
+    this.getComponent(Animator).getClip('Blank').play()
 
     this.addPointerDown()
   }
@@ -38,47 +48,67 @@ export class Tap extends Entity {
   playPourAnim() {
     beerPumpSound.getComponent(AudioSource).playOnce()
 
+    this.getComponent(Animator).getClip('Pour').play()
+    this.removeComponent(OnPointerDown)
+    this.addComponent(
+      new utils.Delay(2500, () => {
+        this.addPointerDown()
+      })
+    )
+
     for (let i = 0; i < this.beerGlasses.length; i++) {
-      if(this.beerGlasses[i].beerBaseState == this.beerBaseState) {
-        this.beerGlasses[i].playPourAnim()
+      if (this.beerGlasses[i].beerBaseState == this.beerBaseState) {
+        sceneMessageBus.emit('BeerGlassPourAnim', {
+          id: this.beerGlasses[i].id,
+          position: this.beerGlasses[i].holdPosition,
+        })
       }
     }
-    sceneMessageBus.emit("TapPourAnim", { id: this.id })
-  }
-
-  stopAnimations() {
-    this.getComponent(Animator).getClip("Blank").stop()
-    this.getComponent(Animator).getClip("Pour").stop()
   }
 
   addPointerDown() {
-    this.addComponent(new OnPointerDown(() => {
-      this.playPourAnim()
-    }, {
-      button: ActionButton.PRIMARY,
-      hoverText: "Pour",
-      showFeedback: true
-    }))
+    this.addComponent(
+      new OnPointerDown(
+        () => {
+          sceneMessageBus.emit('TapPourAnim', { id: this.id })
+        },
+        {
+          button: ActionButton.PRIMARY,
+          hoverText: 'Pour',
+          showFeedback: true,
+        }
+      )
+    )
   }
 }
 
-sceneMessageBus.on("TapPourAnim", (tapID: TapID) => {
-  taps[tapID.id].stopAnimations()
-  taps[tapID.id].getComponent(Animator).getClip("Pour").play()
-  taps[tapID.id].removeComponent(OnPointerDown)
-  taps[tapID.id].addComponent(new utils.Delay(2500, () => {
-    taps[tapID.id].addPointerDown()
-  }))
+sceneMessageBus.on('TapPourAnim', (tapID: TapID) => {
+  taps[tapID.id].playPourAnim()
 })
 
 // Taps
-const redTap = new Tap(0, new GLTFShape("models/redTap.glb"), beerGlasses, BeerBaseState.RED_BEER)
+const redTap = new Tap(
+  0,
+  new GLTFShape('models/redTap.glb'),
+  beerGlasses,
+  BeerBaseState.RED_BEER
+)
 redTap.setParent(beerDispenser)
 
-const yellowTap = new Tap(1, new GLTFShape("models/yellowTap.glb"), beerGlasses, BeerBaseState.YELLOW_BEER)
+const yellowTap = new Tap(
+  1,
+  new GLTFShape('models/yellowTap.glb'),
+  beerGlasses,
+  BeerBaseState.YELLOW_BEER
+)
 yellowTap.setParent(beerDispenser)
 
-const greenTap = new Tap(2, new GLTFShape("models/greenTap.glb"), beerGlasses, BeerBaseState.GREEN_BEER)
+const greenTap = new Tap(
+  2,
+  new GLTFShape('models/greenTap.glb'),
+  beerGlasses,
+  BeerBaseState.GREEN_BEER
+)
 greenTap.setParent(beerDispenser)
 
 const taps: Tap[] = [redTap, yellowTap, greenTap]
