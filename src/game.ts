@@ -3,8 +3,10 @@ import { Sound } from './modules/sound'
 
 import { beerDispenser } from './modules/tap'
 import { sceneMessageBus } from './messageBus'
-import { players, thisPlayerIndex } from './modules/trackPlayers'
+import { currentPlayerId, players } from './modules/trackPlayers'
 import { noSign } from './modules/ui'
+import { getPickedUpItem } from './modules/pickup'
+import { SyncId } from './modules/syncId'
 
 // Base
 const base = new Entity()
@@ -24,15 +26,13 @@ engine.addEntity(tables)
 const input = Input.instance
 
 input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
-  if (thisPlayerIndex === undefined) return
-  log('HOLDING BEER? ', players[thisPlayerIndex].holdingBeerGlass, event.hit)
-  if (
-    players[thisPlayerIndex].holdingBeerGlass &&
-    players[thisPlayerIndex].beer &&
-    event.hit
-  ) {
+  if (currentPlayerId === undefined) return
+  let pickedUpItem = getPickedUpItem(currentPlayerId)
+  log('HOLDING BEER? ', pickedUpItem)
+  if (pickedUpItem && event.hit) {
     if (event.hit.normal.y > 0.99) {
       let beerPosition: Vector3
+
       // place beer under taps
       switch (event.hit.meshName) {
         case 'redBase_collider':
@@ -41,10 +41,10 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
             .position.clone()
             .subtract(new Vector3(0.368, -0.02, 0.31))
           sceneMessageBus.emit('BeerGlassPutDown', {
-            id: players[thisPlayerIndex].beer!.id,
+            id: pickedUpItem.getComponent(SyncId).id,
             position: beerPosition,
             beerState: BeerBaseState.RED_BEER,
-            carryingPlayer: players[thisPlayerIndex].userId,
+            carryingPlayer: currentPlayerId,
           })
           break
         case 'yellowBase_collider':
@@ -54,10 +54,10 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
             .subtract(new Vector3(0, -0.02, 0.31))
 
           sceneMessageBus.emit('BeerGlassPutDown', {
-            id: players[thisPlayerIndex].beer!.id,
+            id: pickedUpItem.getComponent(SyncId).id,
             position: beerPosition,
             beerState: BeerBaseState.YELLOW_BEER,
-            carryingPlayer: players[thisPlayerIndex].userId,
+            carryingPlayer: currentPlayerId,
           })
 
           break
@@ -68,20 +68,20 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
             .subtract(new Vector3(-0.368, -0.02, 0.31))
 
           sceneMessageBus.emit('BeerGlassPutDown', {
-            id: players[thisPlayerIndex].beer!.id,
+            id: pickedUpItem.getComponent(SyncId).id,
             position: beerPosition,
             beerState: BeerBaseState.GREEN_BEER,
-            carryingPlayer: players[thisPlayerIndex].userId,
+            carryingPlayer: currentPlayerId,
           })
 
           break
         default:
           // place beer anywhere else that's flat
           sceneMessageBus.emit('BeerGlassPutDown', {
-            id: players[thisPlayerIndex].beer!.id,
+            id: pickedUpItem.getComponent(SyncId).id,
             position: event.hit.hitPoint,
             beerState: BeerBaseState.NONE,
-            carryingPlayer: players[thisPlayerIndex].userId,
+            carryingPlayer: currentPlayerId,
           })
           break
       }
@@ -94,13 +94,11 @@ input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
 
 // drink
 input.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
-  if (
-    players[thisPlayerIndex].holdingBeerGlass &&
-    players[thisPlayerIndex].beer &&
-    players[thisPlayerIndex].beer?.isFull
-  ) {
+  let pickedUpItem = getPickedUpItem(currentPlayerId)
+  if (!pickedUpItem) return
+  if ((pickedUpItem.getComponent(SyncId).id, pickedUpItem.isFull)) {
     sceneMessageBus.emit('BeerGlassDrink', {
-      id: players[thisPlayerIndex].beer!.id,
+      id: pickedUpItem.getComponent(SyncId).id,
     })
   }
 })

@@ -2,6 +2,7 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { BeerBaseState, BeerGlass, beerGlasses } from 'beerGlass'
 import { sceneMessageBus } from 'src/messageBus'
 import { Sound } from './sound'
+import { SyncId } from './syncId'
 
 // Dispenser
 export const beerDispenser = new Entity()
@@ -59,7 +60,7 @@ export class Tap extends Entity {
     for (let i = 0; i < this.beerGlasses.length; i++) {
       if (this.beerGlasses[i].beerBaseState == this.beerBaseState) {
         sceneMessageBus.emit('BeerGlassPourAnim', {
-          id: this.beerGlasses[i].id,
+          id: this.beerGlasses[i].getComponent(SyncId).id,
           position: this.beerGlasses[i].holdPosition,
         })
       }

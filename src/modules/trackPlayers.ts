@@ -9,7 +9,9 @@ export let players: {
   beer?: BeerGlass | undefined
 }[] = []
 
-export let thisPlayerIndex: number
+// export let thisPlayerIndex: number
+
+export let currentPlayerId: string
 
 executeTask(async () => {
   // register current player
@@ -22,7 +24,8 @@ executeTask(async () => {
     holdingBeerGlass: false,
     beer: undefined,
   })
-  thisPlayerIndex = 0
+  //   thisPlayerIndex = 0
+  currentPlayerId = user.userId
 
   let connectedPlayers = await getConnectedPlayers()
 
