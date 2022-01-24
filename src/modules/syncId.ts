@@ -5,3 +5,5 @@ export class SyncId {
     this.id = id
   }
 }
+
+export let entitiesWithSyncId = engine.getComponentGroup(SyncId)
