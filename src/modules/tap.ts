@@ -1,8 +1,9 @@
 import * as utils from '@dcl/ecs-scene-utils'
 import { BeerBaseState, BeerGlass, beerGlasses } from 'beerGlass'
-import { sceneMessageBus } from 'src/messageBus'
+import { sceneMessageBus } from 'src/modules/messageBus'
+import { OnDropItem, putDownEventData } from './pickup'
 import { Sound } from './sound'
-import { SyncId } from './syncId'
+import { getEntityWithId, SyncId } from './syncId'
 
 // Dispenser
 export const beerDispenser = new Entity()
@@ -12,6 +13,75 @@ beerDispenser.addComponent(
 )
 beerDispenser.getComponent(Transform).rotate(Vector3.Up(), 180)
 engine.addEntity(beerDispenser)
+beerDispenser.addComponent(new SyncId('beerDispenser1'))
+beerDispenser.addComponentOrReplace(
+  new OnDropItem(
+    [
+      'beer0',
+      'beer1',
+      'beer2',
+      'beer3',
+      'beer4',
+      'beer5',
+      'beer6',
+      'beer7',
+      'beer8',
+      'beer9',
+    ],
+    (data: putDownEventData) => {
+      log('Dropping beer in dispenser', data)
+
+      let pickedUpItem = getEntityWithId(data.pickedUpItem)
+      let dropOnItem = getEntityWithId(data.dropOnItem)
+      if (!pickedUpItem) return
+      if (!dropOnItem) return
+
+      // place beer under taps
+      let finalPosition: Vector3
+      switch (data.hit.meshName) {
+        case 'redBase_collider':
+          finalPosition = dropOnItem
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(0.368, -0.02, 0.31))
+          sceneMessageBus.emit('putDownItem', {
+            id: pickedUpItem.getComponent(SyncId).id,
+            position: finalPosition,
+            // beerState: BeerBaseState.RED_BEER,
+            userId: data.userId,
+          })
+          break
+        case 'yellowBase_collider':
+          finalPosition = dropOnItem
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(0, -0.02, 0.31))
+
+          sceneMessageBus.emit('putDownItem', {
+            id: pickedUpItem.getComponent(SyncId).id,
+            position: finalPosition,
+            // beerState: BeerBaseState.YELLOW_BEER,
+            userId: data.userId,
+          })
+          break
+        case 'greenBase_collider':
+          finalPosition = dropOnItem
+            .getComponent(Transform)
+            .position.clone()
+            .subtract(new Vector3(-0.368, -0.02, 0.31))
+
+          sceneMessageBus.emit('putDownItem', {
+            id: pickedUpItem.getComponent(SyncId).id,
+            position: finalPosition,
+            // beerState: BeerBaseState.GREEN_BEER,
+            userId: data.userId,
+          })
+          break
+      }
+    },
+    false
+  )
+)
 
 // Multiplayer
 type TapID = {

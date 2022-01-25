@@ -1,18 +1,34 @@
 import { BeerBaseState } from './beerGlass'
 import * as utils from '@dcl/ecs-scene-utils'
 import { currentPlayerId } from './trackPlayers'
-import { entitiesWithSyncId, SyncId } from './syncId'
+import { getEntityWithId, SyncId } from './syncId'
 import { sceneMessageBus } from './messageBus'
 import { noSign } from './ui'
 import { Sound } from './sound'
 
-type pickupComponentArguments = {
+export type pickupComponentArguments = {
   holdPosition?: Vector3
   lastPos?: Vector3
   putDownSound?: string
   anchorPoint?: AttachToAvatarAnchorPointId
   holdRotation?: Quaternion
 }
+
+export type putDownEventData = {
+  userId: string
+  pickedUpItem: string
+  dropOnItem: string
+  hit: {
+    length: number
+    hitPoint: ReadOnlyVector3
+    meshName: string
+    normal: ReadOnlyVector3
+    worldNormal: ReadOnlyVector3
+    entityId: string
+  }
+}
+
+// TODO is creating a new parent entity each time I pick up an item a bad practice?
 
 @Component('pickedUp')
 export class PickedUp {
@@ -24,7 +40,6 @@ export class PickedUp {
   putDownSound: string | undefined
   anchorPoint: AttachToAvatarAnchorPointId | undefined
   holdRotation: Quaternion
-  // TODO, make input an object w properties
   constructor(userId: string, args: pickupComponentArguments) {
     this.userId = userId
     this.holdPosition = args.holdPosition
@@ -50,7 +65,32 @@ export class PickedUp {
   }
 }
 
-// TODO is creating a new parent entity each time a bad practice?
+@Component('onDropItem')
+export class OnDropItem {
+  acceptedIds: string[]
+  dropFunction: (data: putDownEventData) => void
+  messageBusSync: boolean
+
+  constructor(
+    acceptedIds: string[],
+    dropFunction: (data: putDownEventData) => void,
+    messageBusSync?: boolean
+  ) {
+    this.acceptedIds = acceptedIds
+    this.dropFunction = dropFunction
+    this.messageBusSync = messageBusSync ? messageBusSync : true
+  }
+
+  acceptsId(id: string): boolean {
+    if (this.acceptedIds.length === 0) return true
+    for (let acceptedId of this.acceptedIds) {
+      if (acceptedId === id) {
+        return true
+      }
+    }
+    return false
+  }
+}
 
 export let currentlyPickedUp = engine.getComponentGroup(PickedUp)
 
@@ -90,62 +130,42 @@ export class PickUpSystem implements ISystem {
         log('HOLDING BEER? ', pickedUpItem)
         if (pickedUpItem && event.hit) {
           if (event.hit.normal.y > 0.99) {
-            let beerPosition: Vector3
+            let hitEntity = engine.entities[event.hit.entityId]
 
-            sceneMessageBus.emit('putDownItem', {
-              id: pickedUpItem.getComponent(SyncId).id,
-              position: event.hit.hitPoint,
-              //   beerState: BeerBaseState.NONE,
-              userId: currentPlayerId,
-            })
+            if (!hitEntity.hasComponent(SyncId)) {
+              log('Hit entity has no SyncId Component!')
+              return
+            }
 
-            // place beer under taps
-            // switch (event.hit.meshName) {
-            //   case 'redBase_collider':
-            // 	beerPosition = beerDispenser
-            // 	  .getComponent(Transform)
-            // 	  .position.clone()
-            // 	  .subtract(new Vector3(0.368, -0.02, 0.31))
-            // 	sceneMessageBus.emit('BeerGlassPutDown', {
-            // 	  id: pickedUpItem.getComponent(SyncId).id,
-            // 	  position: beerPosition,
-            // 	  beerState: BeerBaseState.RED_BEER,
-            // 	  userId: currentPlayerId,
-            // 	})
-            // 	break
-            //   case 'yellowBase_collider':
-            // 	beerPosition = beerDispenser
-            // 	  .getComponent(Transform)
-            // 	  .position.clone()
-            // 	  .subtract(new Vector3(0, -0.02, 0.31))
-
-            // 	sceneMessageBus.emit('BeerGlassPutDown', {
-            // 	  id: pickedUpItem.getComponent(SyncId).id,
-            // 	  position: beerPosition,
-            // 	  beerState: BeerBaseState.YELLOW_BEER,
-            // 	  userId: currentPlayerId,
-            // 	})
-
-            // 	break
-            //   case 'greenBase_collider':
-            // 	beerPosition = beerDispenser
-            // 	  .getComponent(Transform)
-            // 	  .position.clone()
-            // 	  .subtract(new Vector3(-0.368, -0.02, 0.31))
-
-            // 	sceneMessageBus.emit('BeerGlassPutDown', {
-            // 	  id: pickedUpItem.getComponent(SyncId).id,
-            // 	  position: beerPosition,
-            // 	  beerState: BeerBaseState.GREEN_BEER,
-            // 	  userId: currentPlayerId,
-            // 	})
-
-            // 	break
-            //   default:
-            // 	// place beer anywhere else that's flat
-
-            // 	break
-            // }
+            if (
+              hitEntity.hasComponent(OnDropItem) &&
+              pickedUpItem.hasComponent(SyncId) &&
+              hitEntity
+                .getComponent(OnDropItem)
+                .acceptsId(pickedUpItem.getComponent(SyncId).id)
+            ) {
+              // OnDropItem on hit entity
+              hitEntity.getComponent(OnDropItem).dropFunction({
+                userId: currentPlayerId,
+                pickedUpItem: pickedUpItem.getComponent(SyncId).id,
+                dropOnItem: hitEntity.getComponent(SyncId).id,
+                hit: event.hit,
+              })
+              if (hitEntity.getComponent(OnDropItem).messageBusSync) {
+                sceneMessageBus.emit('putDownItem', {
+                  id: pickedUpItem.getComponent(SyncId).id,
+                  position: event.hit.hitPoint,
+                  userId: currentPlayerId,
+                })
+              }
+            } else {
+              // default: no OnDropItem on hit entity
+              sceneMessageBus.emit('putDownItem', {
+                id: pickedUpItem.getComponent(SyncId).id,
+                position: event.hit.hitPoint,
+                userId: currentPlayerId,
+              })
+            }
           } else {
             noSign.show(1)
             errorSound.getComponent(AudioSource).playOnce()
@@ -164,13 +184,7 @@ export class PickUpSystem implements ISystem {
     })
 
     sceneMessageBus.on('pickUpItem', (itemState: any) => {
-      let pickedUpEntity: Entity | undefined = undefined
-
-      for (let entity of entitiesWithSyncId.entities) {
-        if (entity.getComponent(SyncId).id === itemState.id) {
-          pickedUpEntity = entity as Entity
-        }
-      }
+      let pickedUpEntity = getEntityWithId(itemState.id)
 
       if (!pickedUpEntity) return
 
@@ -186,26 +200,14 @@ export class PickUpSystem implements ISystem {
     })
 
     sceneMessageBus.on('putDownItem', (itemState: any) => {
-      let droppedEntity: Entity | undefined = undefined
-
-      for (let entity of entitiesWithSyncId.entities) {
-        if (entity.getComponent(SyncId).id === itemState.id) {
-          droppedEntity = entity as Entity
-        }
-      }
+      let droppedEntity = getEntityWithId(itemState.id)
 
       if (!droppedEntity) return
 
-      putDown(
-        droppedEntity,
-        itemState.position
-        // beerGlassState.beerState
-      )
+      putDownEntity(droppedEntity, itemState.position)
     })
   }
 }
-
-// TODO : add system to engine when creating component
 
 export function checkIfPicking(userId: string): boolean {
   let isPicking = false
@@ -305,11 +307,10 @@ export function pickUpEntity(
   entity.getComponent(Transform).rotation = picked.holdRotation
 }
 
-export function putDown(
+export function putDownEntity(
   entity: Entity,
   placePosition: Vector3,
   placeRotation?: Quaternion
-  //beerBaseState?: BeerBaseState
 ) {
   if (!entity.hasComponent(PickedUp)) return
 
@@ -335,6 +336,4 @@ export function putDown(
       rotation: placeRotation ? placeRotation : Quaternion.Zero(),
     })
   )
-
-  // this.beerBaseState = beerBaseState
 }

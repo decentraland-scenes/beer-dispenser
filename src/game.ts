@@ -1,4 +1,4 @@
-import { BeerBaseState } from './modules/beerGlass'
+import { BeerBaseState, BeerGlass } from './modules/beerGlass'
 import { Sound } from './modules/sound'
 
 import { beerDispenser } from './modules/tap'
@@ -8,11 +8,6 @@ import { getPickedUpItem, PickUpSystem } from './modules/pickup'
 import { SyncId } from './modules/syncId'
 import { currentPlayerId } from './modules/trackPlayers'
 
-// Base
-const base = new Entity()
-base.addComponent(new GLTFShape('models/baseDarkWithCollider.glb'))
-engine.addEntity(base)
-
 // Tables
 const tables = new Entity()
 tables.addComponent(new GLTFShape('models/tables.glb'))
@@ -21,79 +16,14 @@ engine.addEntity(tables)
 
 engine.addSystem(new PickUpSystem())
 
-// // Instance the input object
-// const input = Input.instance
-
-// input.subscribe('BUTTON_DOWN', ActionButton.PRIMARY, true, (event) => {
-//   if (currentPlayerId === undefined) return
-//   let pickedUpItem = getPickedUpItem(currentPlayerId)
-//   log('HOLDING BEER? ', pickedUpItem)
-//   if (pickedUpItem && event.hit) {
-//     if (event.hit.normal.y > 0.99) {
-//       let beerPosition: Vector3
-
-//       // place beer under taps
-//       switch (event.hit.meshName) {
-//         case 'redBase_collider':
-//           beerPosition = beerDispenser
-//             .getComponent(Transform)
-//             .position.clone()
-//             .subtract(new Vector3(0.368, -0.02, 0.31))
-//           sceneMessageBus.emit('BeerGlassPutDown', {
-//             id: pickedUpItem.getComponent(SyncId).id,
-//             position: beerPosition,
-//             beerState: BeerBaseState.RED_BEER,
-//             carryingPlayer: currentPlayerId,
-//           })
-//           break
-//         case 'yellowBase_collider':
-//           beerPosition = beerDispenser
-//             .getComponent(Transform)
-//             .position.clone()
-//             .subtract(new Vector3(0, -0.02, 0.31))
-
-//           sceneMessageBus.emit('BeerGlassPutDown', {
-//             id: pickedUpItem.getComponent(SyncId).id,
-//             position: beerPosition,
-//             beerState: BeerBaseState.YELLOW_BEER,
-//             carryingPlayer: currentPlayerId,
-//           })
-
-//           break
-//         case 'greenBase_collider':
-//           beerPosition = beerDispenser
-//             .getComponent(Transform)
-//             .position.clone()
-//             .subtract(new Vector3(-0.368, -0.02, 0.31))
-
-//           sceneMessageBus.emit('BeerGlassPutDown', {
-//             id: pickedUpItem.getComponent(SyncId).id,
-//             position: beerPosition,
-//             beerState: BeerBaseState.GREEN_BEER,
-//             carryingPlayer: currentPlayerId,
-//           })
-
-//           break
-//         default:
-//           // place beer anywhere else that's flat
-//           sceneMessageBus.emit('BeerGlassPutDown', {
-//             id: pickedUpItem.getComponent(SyncId).id,
-//             position: event.hit.hitPoint,
-//             beerState: BeerBaseState.NONE,
-//             carryingPlayer: currentPlayerId,
-//           })
-//           break
-//       }
-//     } else {
-//       noSign.show(1)
-//       errorSound.getComponent(AudioSource).playOnce()
-//     }
-//   }
-// })
+// Taps Base
+const base = new Entity()
+base.addComponent(new GLTFShape('models/baseDarkWithCollider.glb'))
+engine.addEntity(base)
 
 // drink
 Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
-  let pickedUpItem = getPickedUpItem(currentPlayerId)
+  let pickedUpItem = getPickedUpItem(currentPlayerId) as BeerGlass
   if (!pickedUpItem) return
   if ((pickedUpItem.getComponent(SyncId).id, pickedUpItem.isFull)) {
     sceneMessageBus.emit('BeerGlassDrink', {

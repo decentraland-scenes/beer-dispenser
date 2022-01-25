@@ -2,8 +2,8 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { Sound } from './sound'
 import { currentPlayerId } from './trackPlayers'
 import { sceneMessageBus } from 'src/modules/messageBus'
-import { checkIfPicking, PickedUp, putDown } from './pickup'
-import { SyncId } from './syncId'
+import { checkIfPicking, PickedUp } from './pickup'
+import { getEntityWithId, SyncId } from './syncId'
 
 // Track player's state
 export enum BeerBaseState {
@@ -15,7 +15,7 @@ export enum BeerBaseState {
 
 // Multiplayer
 type BeerGlassState = {
-  id: number
+  id: string
   position: Vector3
   beerState: BeerBaseState
   carryingPlayer: string
@@ -32,7 +32,7 @@ export class BeerGlass extends Entity {
   public beerBaseState: BeerBaseState = BeerBaseState.NONE
 
   constructor(
-    id: number,
+    id: string,
     model: GLTFShape,
     position: Vector3,
     public holdPosition: Vector3
@@ -70,12 +70,6 @@ export class BeerGlass extends Entity {
           ) {
             pickUpSound.getComponent(AudioSource).playOnce()
 
-            // sceneMessageBus.emit('BeerGlassPickedUp', {
-            //   id: this.getComponent(SyncId).id,
-            //   position: this.holdPosition,
-            //   carryingPlayer: currentPlayerId,
-            //   beerState: BeerBaseState.NONE,
-            // })
             this.addComponentOrReplace(
               new PickedUp(currentPlayerId, {
                 holdPosition: beerHoldPosition,
@@ -123,22 +117,6 @@ export class BeerGlass extends Entity {
     this.getComponent(Animator).getClip('Blank').play()
   }
 
-  //   reset() {
-  //     if (!this.hasComponent(PickedUp)) return
-
-  //     this.addComponentOrReplace(
-  //       new Transform({
-  //         position: this.getComponent(PickedUp).lastPos,
-  //         rotation: Quaternion.Zero(),
-  //       })
-  //     )
-  //     this.getComponent(Transform).position = Vector3.Zero()
-  //     this.getComponent(Transform).rotation = Quaternion.Zero()
-  //     this.beerBaseState = BeerBaseState.NONE
-  //     this.isFull = false
-  //     this.removeComponent(PickedUp)
-  //   }
-
   addPointerDown() {
     this.addComponent(
       new OnPointerDown(
@@ -165,57 +143,14 @@ export class BeerGlass extends Entity {
   }
 }
 
-// sceneMessageBus.on('BeerGlassPickedUp', (beerGlassState: BeerGlassState) => {
-//   //   beerGlasses[beerGlassState.id].pickup(beerGlassState.carryingPlayer)
-
-//   beerGlasses[beerGlassState.id].addComponentOrReplace(
-//     new PickedUp(
-//       beerGlassState.carryingPlayer,
-//       beerHoldPosition,
-//       beerGlasses[beerGlassState.id].getComponent(Transform).position
-//     )
-//   )
-
-//   log(
-//     'PICKED UP GLASS ',
-//     beerGlassState.id,
-//     ' by ',
-//     beerGlassState.carryingPlayer,
-//     ' beer state ',
-//     beerGlassState.beerState
-//   )
-// })
-
-// sceneMessageBus.on('BeerGlassPutDown', (beerGlassState: BeerGlassState) => {
-//   putDown(
-//     beerGlasses[beerGlassState.id],
-//     beerGlassState.position
-//     // beerGlassState.beerState
-//   )
-
-//   // 	beerGlasses[beerGlassState.id].putDown(
-//   //     beerGlassState.position,
-//   //     beerGlassState.beerState
-//   //   )
-
-//   log(
-//     'PUTTING DOWN GLASS ',
-//     beerGlassState.id,
-//     ' at ',
-//     beerGlassState.position,
-//     ' by ',
-//     beerGlassState.carryingPlayer,
-//     ' beer state ',
-//     beerGlassState.beerState
-//   )
-// })
-
 sceneMessageBus.on('BeerGlassDrink', (beerGlassState: BeerGlassState) => {
-  beerGlasses[beerGlassState.id].drink()
+  let beer: BeerGlass = getEntityWithId(beerGlassState.id) as BeerGlass
+  beer.drink()
 })
 
 sceneMessageBus.on('BeerGlassPourAnim', (beerGlassState: BeerGlassState) => {
-  beerGlasses[beerGlassState.id].playPourAnim()
+  let beer: BeerGlass = getEntityWithId(beerGlassState.id) as BeerGlass
+  beer.playPourAnim()
 })
 
 // Beer glasses
@@ -225,61 +160,61 @@ const beerHoldPosition = new Vector3(0, -0.75, 0.4)
 
 // NOTE: We're matching the beer object's position in the array with the id
 const beerGlass1 = new BeerGlass(
-  0,
+  'beer0',
   beerGlassShape,
   new Vector3(8.3, 1.25, 8),
   beerHoldPosition
 )
 const beerGlass2 = new BeerGlass(
-  1,
+  'beer1',
   beerGlassShape,
   new Vector3(7.8, 1.25, 8.3),
   beerHoldPosition
 )
 const beerGlass3 = new BeerGlass(
-  2,
+  'beer2',
   beerGlassShape,
   new Vector3(1.86, 0.8, 13.4),
   beerHoldPosition
 )
 const beerGlass4 = new BeerGlass(
-  3,
+  'beer3',
   beerGlassShape,
   new Vector3(2.3, 0.8, 14),
   beerHoldPosition
 )
 const beerGlass5 = new BeerGlass(
-  4,
+  'beer4',
   beerGlassShape,
   new Vector3(13.7, 0.8, 13.8),
   beerHoldPosition
 )
 const beerGlass6 = new BeerGlass(
-  5,
+  'beer5',
   beerGlassShape,
   new Vector3(13.9, 0.8, 14.3),
   beerHoldPosition
 )
 const beerGlass7 = new BeerGlass(
-  6,
+  'beer6',
   beerGlassShape,
   new Vector3(14.5, 0.8, 2.5),
   beerHoldPosition
 )
 const beerGlass8 = new BeerGlass(
-  7,
+  'beer7',
   beerGlassShape,
   new Vector3(13.7, 0.8, 1.9),
   beerHoldPosition
 )
 const beerGlass9 = new BeerGlass(
-  8,
+  'beer8',
   beerGlassShape,
   new Vector3(2.4, 0.8, 1.5),
   beerHoldPosition
 )
 const beerGlass10 = new BeerGlass(
-  9,
+  'beer9',
   beerGlassShape,
   new Vector3(1.8, 0.8, 2.3),
   beerHoldPosition
