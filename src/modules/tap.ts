@@ -1,5 +1,5 @@
 import * as utils from '@dcl/ecs-scene-utils'
-import { BeerBaseState, BeerGlass, beerGlasses } from 'beerGlass'
+import { BeerData, BeerGlass, BeerType } from 'beerGlass'
 import { sceneMessageBus } from 'src/modules/messageBus'
 import { OnDropItem, putDownEventData } from './pickup'
 import { Sound } from './sound'
@@ -11,6 +11,7 @@ beerDispenser.addComponent(new GLTFShape('models/beerDispenser.glb'))
 beerDispenser.addComponent(
   new Transform({ position: new Vector3(8, 1.25, 7.5) })
 )
+
 beerDispenser.getComponent(Transform).rotate(Vector3.Up(), 180)
 engine.addEntity(beerDispenser)
 beerDispenser.addComponent(new SyncId('beerDispenser1'))
@@ -44,12 +45,11 @@ beerDispenser.addComponentOrReplace(
             .getComponent(Transform)
             .position.clone()
             .subtract(new Vector3(0.368, -0.02, 0.31))
-          sceneMessageBus.emit('putDownItem', {
-            id: pickedUpItem.getComponent(SyncId).id,
-            position: finalPosition,
-            // beerState: BeerBaseState.RED_BEER,
-            userId: data.userId,
-          })
+
+          pickedUpItem.getComponent(Transform).position = finalPosition
+          pickedUpItem.getComponent(BeerData).beerType = BeerType.RED_BEER
+          redTap.getComponent(RefToEntity).entity = pickedUpItem
+
           break
         case 'yellowBase_collider':
           finalPosition = dropOnItem
@@ -57,12 +57,9 @@ beerDispenser.addComponentOrReplace(
             .position.clone()
             .subtract(new Vector3(0, -0.02, 0.31))
 
-          sceneMessageBus.emit('putDownItem', {
-            id: pickedUpItem.getComponent(SyncId).id,
-            position: finalPosition,
-            // beerState: BeerBaseState.YELLOW_BEER,
-            userId: data.userId,
-          })
+          pickedUpItem.getComponent(Transform).position = finalPosition
+          pickedUpItem.getComponent(BeerData).beerType = BeerType.YELLOW_BEER
+          yellowTap.getComponent(RefToEntity).entity = pickedUpItem
           break
         case 'greenBase_collider':
           finalPosition = dropOnItem
@@ -70,22 +67,18 @@ beerDispenser.addComponentOrReplace(
             .position.clone()
             .subtract(new Vector3(-0.368, -0.02, 0.31))
 
-          sceneMessageBus.emit('putDownItem', {
-            id: pickedUpItem.getComponent(SyncId).id,
-            position: finalPosition,
-            // beerState: BeerBaseState.GREEN_BEER,
-            userId: data.userId,
-          })
+          pickedUpItem.getComponent(Transform).position = finalPosition
+          pickedUpItem.getComponent(BeerData).beerType = BeerType.GREEN_BEER
+          greenTap.getComponent(RefToEntity).entity = pickedUpItem
           break
       }
-    },
-    false
+    }
   )
 )
 
-// Multiplayer
-type TapID = {
-  id: number
+@Component('refToEntity')
+export class RefToEntity {
+  entity?: Entity
 }
 
 // Sound
@@ -93,16 +86,17 @@ const beerPumpSound = new Sound(new AudioClip('sounds/beerPump.mp3'))
 
 export class Tap extends Entity {
   constructor(
-    public id: number,
+    public id: string,
     model: GLTFShape,
-    public beerGlasses: BeerGlass[],
-    public beerBaseState: BeerBaseState
+    public beerBaseState: BeerType
   ) {
     super()
     engine.addEntity(this)
     this.addComponent(model)
     this.addComponent(new Transform())
-    this.beerGlasses = beerGlasses
+
+    this.addComponent(new SyncId(id))
+    this.addComponent(new RefToEntity())
 
     this.addComponent(new Animator())
     this.getComponent(Animator).addClip(
@@ -127,21 +121,27 @@ export class Tap extends Entity {
       })
     )
 
-    for (let i = 0; i < this.beerGlasses.length; i++) {
-      if (this.beerGlasses[i].beerBaseState == this.beerBaseState) {
-        sceneMessageBus.emit('BeerGlassPourAnim', {
-          id: this.beerGlasses[i].getComponent(SyncId).id,
-          position: this.beerGlasses[i].holdPosition,
-        })
-      }
-    }
+    //TODO: new component to hold a beer entity in each tap
+    // when adjusting tap position, also parent to this component
+    // now I know what glass, without iterating
+
+    // for (let i = 0; i < this.beerGlasses.length; i++) {
+    //   if (this.beerGlasses[i].beerBaseState == this.beerBaseState) {
+    //     sceneMessageBus.emit('BeerGlassPourAnim', {
+    //       id: this.beerGlasses[i].getComponent(SyncId).id,
+    //       position: this.beerGlasses[i].holdPosition,
+    //     })
+    //   }
+    // }
   }
 
   addPointerDown() {
     this.addComponent(
       new OnPointerDown(
         () => {
-          sceneMessageBus.emit('TapPourAnim', { id: this.id })
+          sceneMessageBus.emit('TapPourAnim', {
+            id: this.getComponent(SyncId).id,
+          })
         },
         {
           button: ActionButton.PRIMARY,
@@ -153,33 +153,31 @@ export class Tap extends Entity {
   }
 }
 
-sceneMessageBus.on('TapPourAnim', (tapID: TapID) => {
-  taps[tapID.id].playPourAnim()
+sceneMessageBus.on('TapPourAnim', (data: { id: string }) => {
+  let tap = getEntityWithId(data.id) as Tap
+  if (!tap) return
+
+  tap.playPourAnim()
 })
 
 // Taps
 const redTap = new Tap(
-  0,
+  'tap1',
   new GLTFShape('models/redTap.glb'),
-  beerGlasses,
-  BeerBaseState.RED_BEER
+  BeerType.RED_BEER
 )
 redTap.setParent(beerDispenser)
 
 const yellowTap = new Tap(
-  1,
+  'tap2',
   new GLTFShape('models/yellowTap.glb'),
-  beerGlasses,
-  BeerBaseState.YELLOW_BEER
+  BeerType.YELLOW_BEER
 )
 yellowTap.setParent(beerDispenser)
 
 const greenTap = new Tap(
-  2,
+  'tap3',
   new GLTFShape('models/greenTap.glb'),
-  beerGlasses,
-  BeerBaseState.GREEN_BEER
+  BeerType.GREEN_BEER
 )
 greenTap.setParent(beerDispenser)
-
-const taps: Tap[] = [redTap, yellowTap, greenTap]

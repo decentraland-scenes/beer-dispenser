@@ -1,4 +1,3 @@
-import { BeerBaseState } from './beerGlass'
 import * as utils from '@dcl/ecs-scene-utils'
 import { currentPlayerId } from './trackPlayers'
 import { getEntityWithId, SyncId } from './syncId'
@@ -69,16 +68,16 @@ export class PickedUp {
 export class OnDropItem {
   acceptedIds: string[]
   dropFunction: (data: putDownEventData) => void
-  messageBusSync: boolean
+  //   messageBusSync: boolean
 
   constructor(
     acceptedIds: string[],
-    dropFunction: (data: putDownEventData) => void,
-    messageBusSync?: boolean
+    dropFunction: (data: putDownEventData) => void
+    // messageBusSync?: boolean
   ) {
     this.acceptedIds = acceptedIds
     this.dropFunction = dropFunction
-    this.messageBusSync = messageBusSync ? messageBusSync : true
+    // this.messageBusSync = messageBusSync ? messageBusSync : true
   }
 
   acceptsId(id: string): boolean {
@@ -130,6 +129,12 @@ export class PickUpSystem implements ISystem {
         log('HOLDING BEER? ', pickedUpItem)
         if (pickedUpItem && event.hit) {
           if (event.hit.normal.y > 0.99) {
+            sceneMessageBus.emit('putDownItem', {
+              id: pickedUpItem.getComponent(SyncId).id,
+              position: event.hit.hitPoint,
+              userId: currentPlayerId,
+            })
+
             let hitEntity = engine.entities[event.hit.entityId]
 
             if (!hitEntity.hasComponent(SyncId)) {
@@ -137,6 +142,7 @@ export class PickUpSystem implements ISystem {
               return
             }
 
+            // OnDropItem on hit entity
             if (
               hitEntity.hasComponent(OnDropItem) &&
               pickedUpItem.hasComponent(SyncId) &&
@@ -144,26 +150,11 @@ export class PickUpSystem implements ISystem {
                 .getComponent(OnDropItem)
                 .acceptsId(pickedUpItem.getComponent(SyncId).id)
             ) {
-              // OnDropItem on hit entity
-              hitEntity.getComponent(OnDropItem).dropFunction({
+              sceneMessageBus.emit('runOnDropFunction', {
                 userId: currentPlayerId,
                 pickedUpItem: pickedUpItem.getComponent(SyncId).id,
                 dropOnItem: hitEntity.getComponent(SyncId).id,
                 hit: event.hit,
-              })
-              if (hitEntity.getComponent(OnDropItem).messageBusSync) {
-                sceneMessageBus.emit('putDownItem', {
-                  id: pickedUpItem.getComponent(SyncId).id,
-                  position: event.hit.hitPoint,
-                  userId: currentPlayerId,
-                })
-              }
-            } else {
-              // default: no OnDropItem on hit entity
-              sceneMessageBus.emit('putDownItem', {
-                id: pickedUpItem.getComponent(SyncId).id,
-                position: event.hit.hitPoint,
-                userId: currentPlayerId,
               })
             }
           } else {
@@ -205,6 +196,20 @@ export class PickUpSystem implements ISystem {
       if (!droppedEntity) return
 
       putDownEntity(droppedEntity, itemState.position)
+    })
+
+    sceneMessageBus.on('runOnDropFunction', (data: putDownEventData) => {
+      let dropOnItem = getEntityWithId(data.dropOnItem)
+      let pickedUpItem = getEntityWithId(data.pickedUpItem)
+
+      if (!dropOnItem || !pickedUpItem) return
+
+      dropOnItem.getComponent(OnDropItem).dropFunction({
+        userId: data.userId,
+        pickedUpItem: pickedUpItem.getComponent(SyncId).id,
+        dropOnItem: dropOnItem.getComponent(SyncId).id,
+        hit: data.hit,
+      })
     })
   }
 }

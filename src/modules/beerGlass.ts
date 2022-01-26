@@ -2,45 +2,46 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { Sound } from './sound'
 import { currentPlayerId } from './trackPlayers'
 import { sceneMessageBus } from 'src/modules/messageBus'
-import { checkIfPicking, PickedUp } from './pickup'
+import { checkIfPicking, getPickedUpItem, PickedUp } from './pickup'
 import { getEntityWithId, SyncId } from './syncId'
 
 // Track player's state
-export enum BeerBaseState {
+export enum BeerType {
   NONE = 'Blank',
   RED_BEER = 'PourRed',
   YELLOW_BEER = 'PourYellow',
   GREEN_BEER = 'PourGreen',
 }
 
-// Multiplayer
-type BeerGlassState = {
-  id: string
-  position: Vector3
-  beerState: BeerBaseState
-  carryingPlayer: string
-}
-
 // Sound
 const pickUpSound = new Sound(new AudioClip('sounds/pickUp.mp3'))
-// const putDownSound = new Sound(new AudioClip('sounds/putDown.mp3'))
 const swallowSound = new Sound(new AudioClip('sounds/swallow.mp3'))
 
-export class BeerGlass extends Entity {
-  //   public glass: Entity
-  public isFull: boolean = false
-  public beerBaseState: BeerBaseState = BeerBaseState.NONE
+@Component('beerData')
+export class BeerData {
+  beerType: BeerType = BeerType.NONE
+  isFull: boolean = false
+  holdPosition: Vector3
+  constructor(beerType: BeerType, isFull?: boolean, holdPosition?: Vector3) {
+    this.beerType = beerType
+    this.isFull = isFull ? isFull : false
+    this.holdPosition = holdPosition ? holdPosition : new Vector3(0, -0.75, 0.4)
+  }
+}
 
+export class BeerGlass extends Entity {
   constructor(
     id: string,
     model: GLTFShape,
     position: Vector3,
-    public holdPosition: Vector3
+    holdPosition: Vector3
   ) {
     super()
     this.addComponent(new Transform({ position: position }))
 
     this.addComponent(new SyncId(id))
+
+    this.addComponent(new BeerData(BeerType.NONE, false, holdPosition))
 
     this.addComponent(model)
 
@@ -72,7 +73,7 @@ export class BeerGlass extends Entity {
 
             this.addComponentOrReplace(
               new PickedUp(currentPlayerId, {
-                holdPosition: beerHoldPosition,
+                holdPosition: this.getComponent(BeerData).holdPosition,
                 lastPos: this.getComponent(Transform).position,
                 putDownSound: 'sounds/putDown.mp3',
               })
@@ -100,8 +101,10 @@ export class BeerGlass extends Entity {
   }
 
   playPourAnim() {
-    this.isFull = true
-    this.getComponent(Animator).getClip(this.beerBaseState).play()
+    this.getComponent(BeerData).isFull = true
+    this.getComponent(Animator)
+      .getClip(this.getComponent(BeerData).beerType)
+      .play()
     this.removeComponent(OnPointerDown)
     this.addComponent(
       new utils.Delay(2500, () => {
@@ -113,7 +116,7 @@ export class BeerGlass extends Entity {
   drink(): void {
     swallowSound.getComponent(AudioSource).playOnce()
 
-    this.isFull = false
+    this.getComponent(BeerData).isFull = false
     this.getComponent(Animator).getClip('Blank').play()
   }
 
@@ -127,9 +130,8 @@ export class BeerGlass extends Entity {
           ) {
             sceneMessageBus.emit('BeerGlassPickedUp', {
               id: this.getComponent(SyncId).id,
-              position: this.holdPosition,
+              position: this.getComponent(BeerData).holdPosition,
               carryingPlayer: currentPlayerId,
-              beerState: BeerBaseState.NONE,
             })
           }
         },
@@ -143,92 +145,27 @@ export class BeerGlass extends Entity {
   }
 }
 
-sceneMessageBus.on('BeerGlassDrink', (beerGlassState: BeerGlassState) => {
-  let beer: BeerGlass = getEntityWithId(beerGlassState.id) as BeerGlass
+// drink
+Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
+  let pickedUpItem = getPickedUpItem(currentPlayerId) as BeerGlass
+  if (!pickedUpItem) return
+  if (
+    (pickedUpItem.getComponent(SyncId).id,
+    pickedUpItem.getComponent(BeerData).isFull)
+  ) {
+    sceneMessageBus.emit('BeerGlassDrink', {
+      id: pickedUpItem.getComponent(SyncId).id,
+    })
+  }
+})
+
+sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
+  let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
   beer.drink()
 })
 
-sceneMessageBus.on('BeerGlassPourAnim', (beerGlassState: BeerGlassState) => {
-  let beer: BeerGlass = getEntityWithId(beerGlassState.id) as BeerGlass
+// pour beer
+sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
+  let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
   beer.playPourAnim()
 })
-
-// Beer glasses
-const beerGlassShape = new GLTFShape('models/beerGlass.glb')
-
-const beerHoldPosition = new Vector3(0, -0.75, 0.4)
-
-// NOTE: We're matching the beer object's position in the array with the id
-const beerGlass1 = new BeerGlass(
-  'beer0',
-  beerGlassShape,
-  new Vector3(8.3, 1.25, 8),
-  beerHoldPosition
-)
-const beerGlass2 = new BeerGlass(
-  'beer1',
-  beerGlassShape,
-  new Vector3(7.8, 1.25, 8.3),
-  beerHoldPosition
-)
-const beerGlass3 = new BeerGlass(
-  'beer2',
-  beerGlassShape,
-  new Vector3(1.86, 0.8, 13.4),
-  beerHoldPosition
-)
-const beerGlass4 = new BeerGlass(
-  'beer3',
-  beerGlassShape,
-  new Vector3(2.3, 0.8, 14),
-  beerHoldPosition
-)
-const beerGlass5 = new BeerGlass(
-  'beer4',
-  beerGlassShape,
-  new Vector3(13.7, 0.8, 13.8),
-  beerHoldPosition
-)
-const beerGlass6 = new BeerGlass(
-  'beer5',
-  beerGlassShape,
-  new Vector3(13.9, 0.8, 14.3),
-  beerHoldPosition
-)
-const beerGlass7 = new BeerGlass(
-  'beer6',
-  beerGlassShape,
-  new Vector3(14.5, 0.8, 2.5),
-  beerHoldPosition
-)
-const beerGlass8 = new BeerGlass(
-  'beer7',
-  beerGlassShape,
-  new Vector3(13.7, 0.8, 1.9),
-  beerHoldPosition
-)
-const beerGlass9 = new BeerGlass(
-  'beer8',
-  beerGlassShape,
-  new Vector3(2.4, 0.8, 1.5),
-  beerHoldPosition
-)
-const beerGlass10 = new BeerGlass(
-  'beer9',
-  beerGlassShape,
-  new Vector3(1.8, 0.8, 2.3),
-  beerHoldPosition
-)
-
-export const beerGlasses: BeerGlass[] = [
-  beerGlass1,
-  beerGlass2,
-  beerGlass3,
-  beerGlass4,
-  beerGlass5,
-  beerGlass6,
-  beerGlass7,
-  beerGlass8,
-  beerGlass9,
-  beerGlass10,
-]
