@@ -22,6 +22,7 @@ export class GlassData {
   beerType: BeerType = BeerType.NONE
   isFull: boolean = false
   holdPosition: Vector3
+  beingFilled: boolean = false
   constructor(beerType: BeerType, isFull?: boolean, holdPosition?: Vector3) {
     this.beerType = beerType
     this.isFull = isFull ? isFull : false
@@ -69,7 +70,8 @@ export class BeerGlass extends Entity {
         (e) => {
           if (
             currentPlayerId !== undefined &&
-            !checkIfHolding(currentPlayerId)
+            !checkIfHolding(currentPlayerId) &&
+            !this.getComponent(GlassData).beingFilled
           ) {
             pickUpSound.getComponent(AudioSource).playOnce()
 
@@ -101,54 +103,6 @@ export class BeerGlass extends Entity {
     )
     label.addComponent(new TextShape(this.getComponent(SyncId).id.toString()))
   }
-
-  playPourAnim() {
-    this.getComponent(GlassData).isFull = true
-    this.getComponent(Animator)
-      .getClip(this.getComponent(GlassData).beerType)
-      .play()
-    this.removeComponent(OnPointerDown)
-    this.addComponent(
-      new utils.Delay(2500, () => {
-        this.addPointerDown()
-      })
-    )
-  }
-
-  drink(): void {
-    swallowSound.getComponent(AudioSource).playOnce()
-
-    this.getComponent(GlassData).isFull = false
-    this.getComponent(Animator).getClip('Blank').play()
-  }
-
-  addPointerDown() {
-    this.addComponent(
-      new OnPointerDown(
-        (e) => {
-          if (
-            currentPlayerId !== undefined &&
-            !checkIfHolding(currentPlayerId)
-          ) {
-            pickUpSound.getComponent(AudioSource).playOnce()
-
-            this.addComponentOrReplace(
-              new PickedUp(currentPlayerId, {
-                holdPosition: this.getComponent(GlassData).holdPosition,
-                lastPos: this.getComponent(Transform).position,
-                putDownSound: 'sounds/putDown.mp3',
-              })
-            )
-          }
-        },
-        {
-          button: ActionButton.PRIMARY,
-          showFeedback: true,
-          hoverText: 'pick up',
-        }
-      )
-    )
-  }
 }
 
 // drink
@@ -167,11 +121,33 @@ Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
 
 sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
   let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
-  beer.drink()
+
+  if (!beer) return
+  swallowSound.getComponent(AudioSource).playOnce()
+  beer.getComponent(GlassData).isFull = false
+  beer.getComponent(Animator).getClip('Blank').play()
 })
 
 // pour beer
 sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
   let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
-  beer.playPourAnim()
+
+  if (!beer) return
+
+  beer
+    .getComponent(Animator)
+    .getClip(beer.getComponent(GlassData).beerType)
+    .play()
+
+  beer.getComponent(GlassData).beingFilled = true
+
+  beer.getComponent(OnPointerDown).showFeedback = false
+
+  beer.addComponentOrReplace(
+    new utils.Delay(2500, () => {
+      beer.getComponent(GlassData).isFull = true
+      beer.getComponent(GlassData).beingFilled = false
+      beer.getComponent(OnPointerDown).showFeedback = true
+    })
+  )
 })

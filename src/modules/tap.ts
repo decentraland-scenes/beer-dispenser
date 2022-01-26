@@ -77,17 +77,13 @@ beerDispenser.addComponentOrReplace(
   )
 )
 
-// @Component('refToEntity')
-// export class RefToEntity {
-//   entity?: Entity
-// }
-
 // Sound
 const beerPumpSound = new Sound(new AudioClip('sounds/beerPump.mp3'))
 
 @Component('tapData')
 export class TapData {
   beerType: BeerType = BeerType.NONE
+  isBeingUsed: boolean = false
 
   constructor(beerType: BeerType) {
     this.beerType = beerType
@@ -114,25 +110,10 @@ export class Tap extends Entity {
     )
     this.getComponent(Animator).getClip('Blank').play()
 
-    this.addPointerDown()
-  }
-
-  playPourAnim() {
-    beerPumpSound.getComponent(AudioSource).playOnce()
-
-    this.getComponent(Animator).getClip('Pour').play()
-    this.removeComponent(OnPointerDown)
-    this.addComponent(
-      new utils.Delay(2500, () => {
-        this.addPointerDown()
-      })
-    )
-  }
-
-  addPointerDown() {
     this.addComponent(
       new OnPointerDown(
         () => {
+          if (this.getComponent(TapData).isBeingUsed) return
           // animate tap
           sceneMessageBus.emit('TapPourAnim', {
             id: this.getComponent(SyncId).id,
@@ -167,7 +148,18 @@ sceneMessageBus.on('TapPourAnim', (data: { id: string }) => {
   let tap = getEntityWithId(data.id) as Tap
   if (!tap) return
 
-  tap.playPourAnim()
+  beerPumpSound.getComponent(AudioSource).playOnce()
+
+  tap.getComponent(Animator).getClip('Pour').play()
+  tap.getComponent(TapData).isBeingUsed = true
+  tap.getComponent(OnPointerDown).showFeedback = false
+
+  tap.addComponent(
+    new utils.Delay(2500, () => {
+      tap.getComponent(OnPointerDown).showFeedback = true
+      tap.getComponent(TapData).isBeingUsed = false
+    })
+  )
 })
 
 // Taps
