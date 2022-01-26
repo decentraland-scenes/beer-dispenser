@@ -1,7 +1,13 @@
-import { BeerGlass } from './modules/beerGlass'
+import { BeerGlass, BeerType, GlassData } from './modules/beerGlass'
 
-import { getPickedUpItem, PickUpSystem } from './modules/pickup'
-import { SyncId } from './modules/syncId'
+import {
+  getPickedUpItem,
+  OnDropItem,
+  PickUpSystem,
+  putDownEventData,
+} from './modules/pickup'
+import { getEntityWithId, SyncId } from './modules/syncId'
+import { Tap } from './modules/tap'
 import { currentPlayerId } from './modules/trackPlayers'
 
 // Tables
@@ -77,3 +83,93 @@ const beerGlass9 = new BeerGlass(
   new Vector3(2.4, 0.8, 1.5),
   beerHoldPosition
 )
+
+// Dispenser
+export const beerDispenser = new Entity()
+beerDispenser.addComponent(new GLTFShape('models/beerDispenser.glb'))
+beerDispenser.addComponent(
+  new Transform({ position: new Vector3(8, 1.25, 7.5) })
+)
+
+beerDispenser.getComponent(Transform).rotate(Vector3.Up(), 180)
+engine.addEntity(beerDispenser)
+beerDispenser.addComponent(new SyncId('beerDispenser1'))
+beerDispenser.addComponentOrReplace(
+  new OnDropItem(
+    [
+      'beer0',
+      'beer1',
+      'beer2',
+      'beer3',
+      'beer4',
+      'beer5',
+      'beer6',
+      'beer7',
+      'beer8',
+      'beer9',
+    ],
+    (data: putDownEventData) => {
+      log('Dropping beer in dispenser', data)
+
+      let pickedUpItem = getEntityWithId(data.pickedUpItem)
+      let dropOnItem = getEntityWithId(data.dropOnItem)
+      if (!pickedUpItem) return
+      if (!dropOnItem) return
+
+      // place beer under taps
+      let finalPosition: Vector3
+      switch (data.hit.meshName) {
+        case 'redBase_collider':
+          pickedUpItem.setParent(dropOnItem)
+
+          pickedUpItem.getComponent(Transform).position = new Vector3(
+            0.368,
+            0,
+            0.31
+          )
+          pickedUpItem.getComponent(GlassData).beerType = BeerType.RED_BEER
+          break
+        case 'yellowBase_collider':
+          pickedUpItem.setParent(dropOnItem)
+          pickedUpItem.getComponent(Transform).position = new Vector3(
+            0,
+            0,
+            0.31
+          )
+          pickedUpItem.getComponent(GlassData).beerType = BeerType.YELLOW_BEER
+          break
+        case 'greenBase_collider':
+          pickedUpItem.setParent(dropOnItem)
+          pickedUpItem.getComponent(Transform).position = new Vector3(
+            -0.368,
+            0,
+            0.31
+          )
+          pickedUpItem.getComponent(GlassData).beerType = BeerType.GREEN_BEER
+          break
+      }
+    }
+  )
+)
+
+// Taps
+const redTap = new Tap(
+  'tap1',
+  new GLTFShape('models/redTap.glb'),
+  BeerType.RED_BEER
+)
+redTap.setParent(beerDispenser)
+
+const yellowTap = new Tap(
+  'tap2',
+  new GLTFShape('models/yellowTap.glb'),
+  BeerType.YELLOW_BEER
+)
+yellowTap.setParent(beerDispenser)
+
+const greenTap = new Tap(
+  'tap3',
+  new GLTFShape('models/greenTap.glb'),
+  BeerType.GREEN_BEER
+)
+greenTap.setParent(beerDispenser)
