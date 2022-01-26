@@ -22,7 +22,7 @@ export class GlassData {
   beerType: BeerType = BeerType.NONE
   isFull: boolean = false
   holdPosition: Vector3
-  beingFilled: boolean = false
+  isBeingFilled: boolean = false
   constructor(beerType: BeerType, isFull?: boolean, holdPosition?: Vector3) {
     this.beerType = beerType
     this.isFull = isFull ? isFull : false
@@ -71,7 +71,7 @@ export class BeerGlass extends Entity {
           if (
             currentPlayerId !== undefined &&
             !checkIfHolding(currentPlayerId) &&
-            !this.getComponent(GlassData).beingFilled
+            !this.getComponent(GlassData).isBeingFilled
           ) {
             pickUpSound.getComponent(AudioSource).playOnce()
 
@@ -139,14 +139,14 @@ sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
     .getClip(beer.getComponent(GlassData).beerType)
     .play()
 
-  beer.getComponent(GlassData).beingFilled = true
+  beer.getComponent(GlassData).isBeingFilled = true
 
   beer.getComponent(OnPointerDown).showFeedback = false
 
   beer.addComponentOrReplace(
     new utils.Delay(2500, () => {
       beer.getComponent(GlassData).isFull = true
-      beer.getComponent(GlassData).beingFilled = false
+      beer.getComponent(GlassData).isBeingFilled = false
       beer.getComponent(OnPointerDown).showFeedback = true
     })
   )
