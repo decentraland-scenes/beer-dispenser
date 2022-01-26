@@ -214,7 +214,7 @@ export class PickUpSystem implements ISystem {
   }
 }
 
-export function checkIfPicking(userId: string): boolean {
+export function checkIfHolding(userId: string): boolean {
   let isPicking = false
   for (let entity of currentlyPickedUp.entities) {
     if (

@@ -77,9 +77,3 @@ const beerGlass9 = new BeerGlass(
   new Vector3(2.4, 0.8, 1.5),
   beerHoldPosition
 )
-const beerGlass10 = new BeerGlass(
-  'beer9',
-  beerGlassShape,
-  new Vector3(1.8, 0.8, 2.3),
-  beerHoldPosition
-)

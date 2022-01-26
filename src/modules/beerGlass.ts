@@ -2,7 +2,7 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { Sound } from './sound'
 import { currentPlayerId } from './trackPlayers'
 import { sceneMessageBus } from 'src/modules/messageBus'
-import { checkIfPicking, getPickedUpItem, PickedUp } from './pickup'
+import { checkIfHolding, getPickedUpItem, PickedUp } from './pickup'
 import { getEntityWithId, SyncId } from './syncId'
 
 // Track player's state
@@ -17,8 +17,8 @@ export enum BeerType {
 const pickUpSound = new Sound(new AudioClip('sounds/pickUp.mp3'))
 const swallowSound = new Sound(new AudioClip('sounds/swallow.mp3'))
 
-@Component('beerData')
-export class BeerData {
+@Component('glasData')
+export class GlassData {
   beerType: BeerType = BeerType.NONE
   isFull: boolean = false
   holdPosition: Vector3
@@ -28,6 +28,8 @@ export class BeerData {
     this.holdPosition = holdPosition ? holdPosition : new Vector3(0, -0.75, 0.4)
   }
 }
+
+export let beerGlasses = engine.getComponentGroup(GlassData)
 
 export class BeerGlass extends Entity {
   constructor(
@@ -41,7 +43,7 @@ export class BeerGlass extends Entity {
 
     this.addComponent(new SyncId(id))
 
-    this.addComponent(new BeerData(BeerType.NONE, false, holdPosition))
+    this.addComponent(new GlassData(BeerType.NONE, false, holdPosition))
 
     this.addComponent(model)
 
@@ -67,13 +69,13 @@ export class BeerGlass extends Entity {
         (e) => {
           if (
             currentPlayerId !== undefined &&
-            !checkIfPicking(currentPlayerId)
+            !checkIfHolding(currentPlayerId)
           ) {
             pickUpSound.getComponent(AudioSource).playOnce()
 
             this.addComponentOrReplace(
               new PickedUp(currentPlayerId, {
-                holdPosition: this.getComponent(BeerData).holdPosition,
+                holdPosition: this.getComponent(GlassData).holdPosition,
                 lastPos: this.getComponent(Transform).position,
                 putDownSound: 'sounds/putDown.mp3',
               })
@@ -93,17 +95,17 @@ export class BeerGlass extends Entity {
     label.setParent(this)
     label.addComponent(
       new Transform({
-        position: new Vector3(0, 0.4, 0),
-        scale: new Vector3(0.2, 0.2, 0.2),
+        position: new Vector3(0, 0.25, 0),
+        scale: new Vector3(0.1, 0.1, 0.1),
       })
     )
     label.addComponent(new TextShape(this.getComponent(SyncId).id.toString()))
   }
 
   playPourAnim() {
-    this.getComponent(BeerData).isFull = true
+    this.getComponent(GlassData).isFull = true
     this.getComponent(Animator)
-      .getClip(this.getComponent(BeerData).beerType)
+      .getClip(this.getComponent(GlassData).beerType)
       .play()
     this.removeComponent(OnPointerDown)
     this.addComponent(
@@ -116,7 +118,7 @@ export class BeerGlass extends Entity {
   drink(): void {
     swallowSound.getComponent(AudioSource).playOnce()
 
-    this.getComponent(BeerData).isFull = false
+    this.getComponent(GlassData).isFull = false
     this.getComponent(Animator).getClip('Blank').play()
   }
 
@@ -126,13 +128,17 @@ export class BeerGlass extends Entity {
         (e) => {
           if (
             currentPlayerId !== undefined &&
-            !checkIfPicking(currentPlayerId)
+            !checkIfHolding(currentPlayerId)
           ) {
-            sceneMessageBus.emit('BeerGlassPickedUp', {
-              id: this.getComponent(SyncId).id,
-              position: this.getComponent(BeerData).holdPosition,
-              carryingPlayer: currentPlayerId,
-            })
+            pickUpSound.getComponent(AudioSource).playOnce()
+
+            this.addComponentOrReplace(
+              new PickedUp(currentPlayerId, {
+                holdPosition: this.getComponent(GlassData).holdPosition,
+                lastPos: this.getComponent(Transform).position,
+                putDownSound: 'sounds/putDown.mp3',
+              })
+            )
           }
         },
         {
@@ -151,7 +157,7 @@ Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
   if (!pickedUpItem) return
   if (
     (pickedUpItem.getComponent(SyncId).id,
-    pickedUpItem.getComponent(BeerData).isFull)
+    pickedUpItem.getComponent(GlassData).isFull)
   ) {
     sceneMessageBus.emit('BeerGlassDrink', {
       id: pickedUpItem.getComponent(SyncId).id,
