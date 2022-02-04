@@ -2,11 +2,11 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { beerGlasses, BeerType, GlassData } from 'beerGlass'
 import { sceneMessageBus } from 'src/modules/messageBus'
 import { OnDropItem, putDownEventData } from './pickup'
-import { Sound } from './sound'
+import { CreateSound } from './sound'
 import { getEntityWithId, SyncId } from './syncId'
 
 // Sound
-const beerPumpSound = new Sound(new AudioClip('sounds/beerPump.mp3'))
+const beerPumpSound = CreateSound(new AudioClip('sounds/beerPump.mp3'))
 
 @Component('tapData')
 export class TapData {
@@ -18,61 +18,60 @@ export class TapData {
   }
 }
 
-export class Tap extends Entity {
-  constructor(id: string, model: GLTFShape, beerType: BeerType) {
-    super()
-    engine.addEntity(this)
-    this.addComponent(model)
-    this.addComponent(new Transform())
+export function createTap(id: string, model: GLTFShape, beerType: BeerType) {
+  let tap = new Entity()
+  engine.addEntity(tap)
+  tap.addComponent(model)
+  tap.addComponent(new Transform())
 
-    this.addComponent(new SyncId(id))
-    this.addComponent(new TapData(beerType))
+  tap.addComponent(new SyncId(id))
+  tap.addComponent(new TapData(beerType))
 
-    this.addComponent(new Animator())
-    this.getComponent(Animator).addClip(
-      new AnimationState('Blank', { looping: false })
-    )
-    this.getComponent(Animator).addClip(
-      new AnimationState('Pour', { looping: false })
-    )
-    this.getComponent(Animator).getClip('Blank').play()
+  tap.addComponent(new Animator())
+  tap
+    .getComponent(Animator)
+    .addClip(new AnimationState('Blank', { looping: false }))
+  tap
+    .getComponent(Animator)
+    .addClip(new AnimationState('Pour', { looping: false }))
+  tap.getComponent(Animator).getClip('Blank').play()
 
-    this.addComponent(
-      new OnPointerDown(
-        () => {
-          if (this.getComponent(TapData).isBeingUsed) return
-          // animate tap
-          sceneMessageBus.emit('TapPourAnim', {
-            id: this.getComponent(SyncId).id,
-          })
+  tap.addComponent(
+    new OnPointerDown(
+      () => {
+        if (tap.getComponent(TapData).isBeingUsed) return
+        // animate tap
+        sceneMessageBus.emit('TapPourAnim', {
+          id: tap.getComponent(SyncId).id,
+        })
 
-          let dispenser = this.getParent()
+        let dispenser = tap.getParent()
 
-          // animate beer glass
-          for (let entity of beerGlasses.entities) {
-            if (
-              entity.getParent() === dispenser &&
-              entity.getComponent(GlassData).beerType ===
-                this.getComponent(TapData).beerType
-            ) {
-              sceneMessageBus.emit('BeerGlassPourAnim', {
-                id: entity.getComponent(SyncId).id,
-              })
-            }
+        // animate beer glass
+        for (let entity of beerGlasses.entities) {
+          if (
+            entity.getParent() === dispenser &&
+            entity.getComponent(GlassData).beerType ===
+              tap.getComponent(TapData).beerType
+          ) {
+            sceneMessageBus.emit('BeerGlassPourAnim', {
+              id: entity.getComponent(SyncId).id,
+            })
           }
-        },
-        {
-          button: ActionButton.PRIMARY,
-          hoverText: 'Pour',
-          showFeedback: true,
         }
-      )
+      },
+      {
+        button: ActionButton.PRIMARY,
+        hoverText: 'Pour',
+        showFeedback: true,
+      }
     )
-  }
+  )
+  return tap
 }
 
 sceneMessageBus.on('TapPourAnim', (data: { id: string }) => {
-  let tap = getEntityWithId(data.id) as Tap
+  let tap = getEntityWithId(data.id) as Entity
   if (!tap) return
 
   beerPumpSound.getComponent(AudioSource).playOnce()

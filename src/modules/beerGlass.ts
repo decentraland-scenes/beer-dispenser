@@ -1,5 +1,5 @@
 import * as utils from '@dcl/ecs-scene-utils'
-import { Sound } from './sound'
+import { CreateSound } from './sound'
 import { currentPlayerId } from './trackPlayers'
 import { sceneMessageBus } from 'src/modules/messageBus'
 import { checkIfHolding, getPickedUpItem, PickedUp } from './pickup'
@@ -14,8 +14,8 @@ export enum BeerType {
 }
 
 // Sound
-const pickUpSound = new Sound(new AudioClip('sounds/pickUp.mp3'))
-const swallowSound = new Sound(new AudioClip('sounds/swallow.mp3'))
+const pickUpSound = CreateSound(new AudioClip('sounds/pickUp.mp3'))
+const swallowSound = CreateSound(new AudioClip('sounds/swallow.mp3'))
 
 @Component('glasData')
 export class GlassData {
@@ -32,82 +32,81 @@ export class GlassData {
 
 export let beerGlasses = engine.getComponentGroup(GlassData)
 
-export class BeerGlass extends Entity {
-  constructor(
-    id: string,
-    model: GLTFShape,
-    position: Vector3,
-    holdPosition: Vector3
-  ) {
-    super()
-    this.addComponent(new Transform({ position: position }))
+export function CreateBeerGlass(
+  id: string,
+  model: GLTFShape,
+  position: Vector3,
+  holdPosition: Vector3
+) {
+  let glass = new Entity()
+  glass.addComponent(new Transform({ position: position }))
 
-    this.addComponent(new SyncId(id))
+  glass.addComponent(new SyncId(id))
 
-    this.addComponent(new GlassData(BeerType.NONE, false, holdPosition))
+  glass.addComponent(new GlassData(BeerType.NONE, false, holdPosition))
 
-    this.addComponent(model)
+  glass.addComponent(model)
 
-    engine.addEntity(this)
+  engine.addEntity(glass)
 
-    this.addComponent(new Animator())
-    this.getComponent(Animator).addClip(
-      new AnimationState('Blank', { looping: false })
-    )
-    this.getComponent(Animator).addClip(
-      new AnimationState('PourRed', { looping: false })
-    )
-    this.getComponent(Animator).addClip(
-      new AnimationState('PourYellow', { looping: false })
-    )
-    this.getComponent(Animator).addClip(
-      new AnimationState('PourGreen', { looping: false })
-    )
-    this.getComponent(Animator).getClip('Blank').play()
+  glass.addComponent(new Animator())
+  glass
+    .getComponent(Animator)
+    .addClip(new AnimationState('Blank', { looping: false }))
+  glass
+    .getComponent(Animator)
+    .addClip(new AnimationState('PourRed', { looping: false }))
+  glass
+    .getComponent(Animator)
+    .addClip(new AnimationState('PourYellow', { looping: false }))
+  glass
+    .getComponent(Animator)
+    .addClip(new AnimationState('PourGreen', { looping: false }))
+  glass.getComponent(Animator).getClip('Blank').play()
 
-    this.addComponent(
-      new OnPointerDown(
-        (e) => {
-          if (
-            currentPlayerId !== undefined &&
-            !checkIfHolding(currentPlayerId) &&
-            !this.getComponent(GlassData).isBeingFilled
-          ) {
-            pickUpSound.getComponent(AudioSource).playOnce()
+  glass.addComponent(
+    new OnPointerDown(
+      (e) => {
+        if (
+          currentPlayerId !== undefined &&
+          !checkIfHolding(currentPlayerId) &&
+          !glass.getComponent(GlassData).isBeingFilled
+        ) {
+          pickUpSound.getComponent(AudioSource).playOnce()
 
-            this.addComponentOrReplace(
-              new PickedUp(currentPlayerId, {
-                holdPosition: this.getComponent(GlassData).holdPosition,
-                lastPos: this.getComponent(Transform).position,
-                putDownSound: 'sounds/putDown.mp3',
-              })
-            )
-          }
-        },
-        {
-          button: ActionButton.PRIMARY,
-          showFeedback: true,
-          hoverText: 'pick up',
+          glass.addComponentOrReplace(
+            new PickedUp(currentPlayerId, {
+              holdPosition: glass.getComponent(GlassData).holdPosition,
+              lastPos: glass.getComponent(Transform).position,
+              putDownSound: 'sounds/putDown.mp3',
+            })
+          )
         }
-      )
+      },
+      {
+        button: ActionButton.PRIMARY,
+        showFeedback: true,
+        hoverText: 'pick up',
+      }
     )
+  )
 
-    /// FOR DEBUG: DISPLAY NUMBERS ON BEERS
-    let label = new Entity()
-    label.setParent(this)
-    label.addComponent(
-      new Transform({
-        position: new Vector3(0, 0.25, 0),
-        scale: new Vector3(0.1, 0.1, 0.1),
-      })
-    )
-    label.addComponent(new TextShape(this.getComponent(SyncId).id.toString()))
-  }
+  /// FOR DEBUG: DISPLAY NUMBERS ON BEERS
+  let label = new Entity()
+  label.setParent(glass)
+  label.addComponent(
+    new Transform({
+      position: new Vector3(0, 0.25, 0),
+      scale: new Vector3(0.1, 0.1, 0.1),
+    })
+  )
+  label.addComponent(new TextShape(glass.getComponent(SyncId).id.toString()))
+  return glass
 }
 
 // drink
 Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
-  let pickedUpItem = getPickedUpItem(currentPlayerId) as BeerGlass
+  let pickedUpItem = getPickedUpItem(currentPlayerId) as Entity
   if (!pickedUpItem) return
   if (
     (pickedUpItem.getComponent(SyncId).id,
@@ -120,7 +119,7 @@ Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
 })
 
 sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
-  let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
+  let beer: Entity = getEntityWithId(data.id) as Entity
 
   if (!beer) return
   swallowSound.getComponent(AudioSource).playOnce()
@@ -130,8 +129,7 @@ sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
 
 // pour beer
 sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
-  let beer: BeerGlass = getEntityWithId(data.id) as BeerGlass
-
+  let beer = getEntityWithId(data.id)
   if (!beer) return
 
   beer
@@ -145,6 +143,7 @@ sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
 
   beer.addComponentOrReplace(
     new utils.Delay(2500, () => {
+      if (!beer) return
       beer.getComponent(GlassData).isFull = true
       beer.getComponent(GlassData).isBeingFilled = false
       beer.getComponent(OnPointerDown).showFeedback = true

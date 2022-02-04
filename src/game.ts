@@ -1,4 +1,4 @@
-import { BeerGlass, BeerType, GlassData } from './modules/beerGlass'
+import { CreateBeerGlass, BeerType, GlassData } from './modules/beerGlass'
 
 import {
   getPickedUpItem,
@@ -7,7 +7,7 @@ import {
   putDownEventData,
 } from './modules/pickup'
 import { getEntityWithId, SyncId } from './modules/syncId'
-import { Tap } from './modules/tap'
+import { createTap } from './modules/tap'
 import { currentPlayerId } from './modules/trackPlayers'
 
 // Tables
@@ -29,55 +29,55 @@ const beerGlassShape = new GLTFShape('models/beerGlass.glb')
 const beerHoldPosition = new Vector3(0, -0.75, 0.4)
 
 // NOTE: We're matching the beer object's position in the array with the id
-const beerGlass1 = new BeerGlass(
+const beerGlass1 = CreateBeerGlass(
   'beer0',
   beerGlassShape,
   new Vector3(8.3, 1.25, 8),
   beerHoldPosition
 )
-const beerGlass2 = new BeerGlass(
+const beerGlass2 = CreateBeerGlass(
   'beer1',
   beerGlassShape,
   new Vector3(7.8, 1.25, 8.3),
   beerHoldPosition
 )
-const beerGlass3 = new BeerGlass(
+const beerGlass3 = CreateBeerGlass(
   'beer2',
   beerGlassShape,
   new Vector3(1.86, 0.8, 13.4),
   beerHoldPosition
 )
-const beerGlass4 = new BeerGlass(
+const beerGlass4 = CreateBeerGlass(
   'beer3',
   beerGlassShape,
   new Vector3(2.3, 0.8, 14),
   beerHoldPosition
 )
-const beerGlass5 = new BeerGlass(
+const beerGlass5 = CreateBeerGlass(
   'beer4',
   beerGlassShape,
   new Vector3(13.7, 0.8, 13.8),
   beerHoldPosition
 )
-const beerGlass6 = new BeerGlass(
+const beerGlass6 = CreateBeerGlass(
   'beer5',
   beerGlassShape,
   new Vector3(13.9, 0.8, 14.3),
   beerHoldPosition
 )
-const beerGlass7 = new BeerGlass(
+const beerGlass7 = CreateBeerGlass(
   'beer6',
   beerGlassShape,
   new Vector3(14.5, 0.8, 2.5),
   beerHoldPosition
 )
-const beerGlass8 = new BeerGlass(
+const beerGlass8 = CreateBeerGlass(
   'beer7',
   beerGlassShape,
   new Vector3(13.7, 0.8, 1.9),
   beerHoldPosition
 )
-const beerGlass9 = new BeerGlass(
+const beerGlass9 = CreateBeerGlass(
   'beer8',
   beerGlassShape,
   new Vector3(2.4, 0.8, 1.5),
@@ -153,21 +153,21 @@ beerDispenser.addComponentOrReplace(
 )
 
 // Taps
-const redTap = new Tap(
+const redTap = createTap(
   'tap1',
   new GLTFShape('models/redTap.glb'),
   BeerType.RED_BEER
 )
 redTap.setParent(beerDispenser)
 
-const yellowTap = new Tap(
+const yellowTap = createTap(
   'tap2',
   new GLTFShape('models/yellowTap.glb'),
   BeerType.YELLOW_BEER
 )
 yellowTap.setParent(beerDispenser)
 
-const greenTap = new Tap(
+const greenTap = createTap(
   'tap3',
   new GLTFShape('models/greenTap.glb'),
   BeerType.GREEN_BEER

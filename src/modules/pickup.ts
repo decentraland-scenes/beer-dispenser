@@ -3,7 +3,7 @@ import { currentPlayerId } from './trackPlayers'
 import { getEntityWithId, SyncId } from './syncId'
 import { sceneMessageBus } from './messageBus'
 import { noSign } from './ui'
-import { Sound } from './sound'
+import { CreateSound } from './sound'
 
 export type pickupComponentArguments = {
   holdPosition?: Vector3
@@ -94,7 +94,7 @@ export class OnDropItem {
 export let currentlyPickedUp = engine.getComponentGroup(PickedUp)
 
 // Sound
-const errorSound = new Sound(new AudioClip('sounds/error.mp3'))
+const errorSound = CreateSound(new AudioClip('sounds/error.mp3'))
 
 export class PickUpSystem implements ISystem {
   update() {
