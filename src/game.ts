@@ -20,7 +20,7 @@ engine.addEntity(base)
 // Beer glasses
 const beerGlassShape = new GLTFShape('models/beerGlass.glb')
 
-const beerHoldPosition = new Vector3(0, -0.75, 0.4)
+const beerHoldPosition = new Vector3(0, -0.1, 0.4)
 
 // NOTE: We're matching the beer object's position in the array with the id
 const beerGlass1 = CreateBeerGlass(
@@ -100,7 +100,7 @@ beerDispenser.addComponentOrReplace(
       'beer6',
       'beer7',
       'beer8',
-      'beer9'
+      'beer9',
     ],
     (data: putDownEventData) => {
       log('Dropping beer in dispenser', data)
