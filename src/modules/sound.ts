@@ -3,7 +3,7 @@ export function CreateSound(
   loop: boolean = false,
   transform?: Vector3
 ) {
-  let sound = new Entity()
+  const sound = new Entity()
   engine.addEntity(sound)
   sound.addComponent(new AudioSource(audio))
   sound.getComponent(AudioSource).loop = loop

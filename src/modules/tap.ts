@@ -1,7 +1,6 @@
 import * as utils from '@dcl/ecs-scene-utils'
 import { beerGlasses, BeerType, GlassData } from 'beerGlass'
 import { sceneMessageBus } from 'src/modules/messageBus'
-import { OnDropItem, putDownEventData } from './pickup'
 import { CreateSound } from './sound'
 import { getEntityWithId, SyncId } from './syncId'
 
@@ -19,7 +18,7 @@ export class TapData {
 }
 
 export function createTap(id: string, model: GLTFShape, beerType: BeerType) {
-  let tap = new Entity()
+  const tap = new Entity()
   engine.addEntity(tap)
   tap.addComponent(model)
   tap.addComponent(new Transform())
@@ -42,20 +41,20 @@ export function createTap(id: string, model: GLTFShape, beerType: BeerType) {
         if (tap.getComponent(TapData).isBeingUsed) return
         // animate tap
         sceneMessageBus.emit('TapPourAnim', {
-          id: tap.getComponent(SyncId).id,
+          id: tap.getComponent(SyncId).id
         })
 
-        let dispenser = tap.getParent()
+        const dispenser = tap.getParent()
 
         // animate beer glass
-        for (let entity of beerGlasses.entities) {
+        for (const entity of beerGlasses.entities) {
           if (
             entity.getParent() === dispenser &&
             entity.getComponent(GlassData).beerType ===
               tap.getComponent(TapData).beerType
           ) {
             sceneMessageBus.emit('BeerGlassPourAnim', {
-              id: entity.getComponent(SyncId).id,
+              id: entity.getComponent(SyncId).id
             })
           }
         }
@@ -63,7 +62,7 @@ export function createTap(id: string, model: GLTFShape, beerType: BeerType) {
       {
         button: ActionButton.PRIMARY,
         hoverText: 'Pour',
-        showFeedback: true,
+        showFeedback: true
       }
     )
   )
@@ -71,7 +70,7 @@ export function createTap(id: string, model: GLTFShape, beerType: BeerType) {
 }
 
 sceneMessageBus.on('TapPourAnim', (data: { id: string }) => {
-  let tap = getEntityWithId(data.id) as Entity
+  const tap = getEntityWithId(data.id) as Entity
   if (!tap) return
 
   beerPumpSound.getComponent(AudioSource).playOnce()

@@ -10,7 +10,7 @@ export enum BeerType {
   NONE = 'Blank',
   RED_BEER = 'PourRed',
   YELLOW_BEER = 'PourYellow',
-  GREEN_BEER = 'PourGreen',
+  GREEN_BEER = 'PourGreen'
 }
 
 // Sound
@@ -30,7 +30,7 @@ export class GlassData {
   }
 }
 
-export let beerGlasses = engine.getComponentGroup(GlassData)
+export const beerGlasses = engine.getComponentGroup(GlassData)
 
 export function CreateBeerGlass(
   id: string,
@@ -38,7 +38,7 @@ export function CreateBeerGlass(
   position: Vector3,
   holdPosition: Vector3
 ) {
-  let glass = new Entity()
+  const glass = new Entity()
   glass.addComponent(new Transform({ position: position }))
 
   glass.addComponent(new SyncId(id))
@@ -66,7 +66,7 @@ export function CreateBeerGlass(
 
   glass.addComponent(
     new OnPointerDown(
-      (e) => {
+      (_e) => {
         if (
           currentPlayerId !== undefined &&
           !checkIfHolding(currentPlayerId) &&
@@ -78,7 +78,7 @@ export function CreateBeerGlass(
             new PickedUp(currentPlayerId, {
               holdPosition: glass.getComponent(GlassData).holdPosition,
               lastPos: glass.getComponent(Transform).position,
-              putDownSound: 'sounds/putDown.mp3',
+              putDownSound: 'sounds/putDown.mp3'
             })
           )
         }
@@ -86,18 +86,18 @@ export function CreateBeerGlass(
       {
         button: ActionButton.PRIMARY,
         showFeedback: true,
-        hoverText: 'pick up',
+        hoverText: 'pick up'
       }
     )
   )
 
   /// FOR DEBUG: DISPLAY NUMBERS ON BEERS
-  let label = new Entity()
+  const label = new Entity()
   label.setParent(glass)
   label.addComponent(
     new Transform({
       position: new Vector3(0, 0.25, 0),
-      scale: new Vector3(0.1, 0.1, 0.1),
+      scale: new Vector3(0.1, 0.1, 0.1)
     })
   )
   label.addComponent(new TextShape(glass.getComponent(SyncId).id.toString()))
@@ -106,20 +106,20 @@ export function CreateBeerGlass(
 
 // drink
 Input.instance.subscribe('BUTTON_DOWN', ActionButton.SECONDARY, false, () => {
-  let pickedUpItem = getPickedUpItem(currentPlayerId) as Entity
+  const pickedUpItem = getPickedUpItem(currentPlayerId) as Entity
   if (!pickedUpItem) return
   if (
     (pickedUpItem.getComponent(SyncId).id,
     pickedUpItem.getComponent(GlassData).isFull)
   ) {
     sceneMessageBus.emit('BeerGlassDrink', {
-      id: pickedUpItem.getComponent(SyncId).id,
+      id: pickedUpItem.getComponent(SyncId).id
     })
   }
 })
 
 sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
-  let beer: Entity = getEntityWithId(data.id) as Entity
+  const beer: Entity = getEntityWithId(data.id) as Entity
 
   if (!beer) return
   swallowSound.getComponent(AudioSource).playOnce()
@@ -129,7 +129,7 @@ sceneMessageBus.on('BeerGlassDrink', (data: { id: string }) => {
 
 // pour beer
 sceneMessageBus.on('BeerGlassPourAnim', (data: { id: string }) => {
-  let beer = getEntityWithId(data.id)
+  const beer = getEntityWithId(data.id)
   if (!beer) return
 
   beer

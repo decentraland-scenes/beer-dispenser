@@ -1,14 +1,8 @@
 import { CreateBeerGlass, BeerType, GlassData } from './modules/beerGlass'
 
-import {
-  getPickedUpItem,
-  OnDropItem,
-  PickUpSystem,
-  putDownEventData,
-} from './modules/pickup'
+import { OnDropItem, PickUpSystem, putDownEventData } from './modules/pickup'
 import { getEntityWithId, SyncId } from './modules/syncId'
 import { createTap } from './modules/tap'
-import { currentPlayerId } from './modules/trackPlayers'
 
 // Tables
 const tables = new Entity()
@@ -106,18 +100,17 @@ beerDispenser.addComponentOrReplace(
       'beer6',
       'beer7',
       'beer8',
-      'beer9',
+      'beer9'
     ],
     (data: putDownEventData) => {
       log('Dropping beer in dispenser', data)
 
-      let pickedUpItem = getEntityWithId(data.pickedUpItem)
-      let dropOnItem = getEntityWithId(data.dropOnItem)
+      const pickedUpItem = getEntityWithId(data.pickedUpItem)
+      const dropOnItem = getEntityWithId(data.dropOnItem)
       if (!pickedUpItem) return
       if (!dropOnItem) return
 
       // place beer under taps
-      let finalPosition: Vector3
       switch (data.hit.meshName) {
         case 'redBase_collider':
           pickedUpItem.setParent(dropOnItem)

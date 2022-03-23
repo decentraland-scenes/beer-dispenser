@@ -6,10 +6,10 @@ export class SyncId {
   }
 }
 
-export let entitiesWithSyncId = engine.getComponentGroup(SyncId)
+export const entitiesWithSyncId = engine.getComponentGroup(SyncId)
 
 export function getEntityWithId(entityId: string): Entity | undefined {
-  for (let entity of entitiesWithSyncId.entities) {
+  for (const entity of entitiesWithSyncId.entities) {
     if (entity.getComponent(SyncId).id === entityId) {
       return entity as Entity
     }
