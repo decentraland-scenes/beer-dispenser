@@ -100,7 +100,7 @@ beerDispenser.addComponentOrReplace(
       'beer6',
       'beer7',
       'beer8',
-      'beer9',
+      'beer9'
     ],
     (data: putDownEventData) => {
       log('Dropping beer in dispenser', data)
