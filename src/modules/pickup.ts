@@ -113,8 +113,7 @@ export class PickUpSystem implements ISystem {
       holdRotation: entity.getComponent(PickedUp).holdRotation,
       lastPos: entity.getComponent(PickedUp).lastPos,
       anchorPoint: entity.getComponent(PickedUp).anchorPoint,
-      putDownSound: entity.getComponent(PickedUp).putDownSound
-      // holdRotation TODO
+      putDownSound: entity.getComponent(PickedUp).putDownSound,
     })
   }
 
@@ -126,13 +125,13 @@ export class PickUpSystem implements ISystem {
       (event) => {
         if (currentPlayerId === undefined) return
         const pickedUpItem = getPickedUpItem(currentPlayerId)
-        log('HOLDING BEER? ', pickedUpItem)
+        log('HOLDING ITEM? ', pickedUpItem)
         if (pickedUpItem && event.hit) {
           if (event.hit.normal.y > 0.99) {
             sceneMessageBus.emit('putDownItem', {
               id: pickedUpItem.getComponent(SyncId).id,
               position: event.hit.hitPoint,
-              userId: currentPlayerId
+              userId: currentPlayerId,
             })
 
             const hitEntity = engine.entities[event.hit.entityId]
@@ -154,7 +153,7 @@ export class PickUpSystem implements ISystem {
                 userId: currentPlayerId,
                 pickedUpItem: pickedUpItem.getComponent(SyncId).id,
                 dropOnItem: hitEntity.getComponent(SyncId).id,
-                hit: event.hit
+                hit: event.hit,
               })
             }
           } else {
@@ -208,7 +207,7 @@ export class PickUpSystem implements ISystem {
         userId: data.userId,
         pickedUpItem: pickedUpItem.getComponent(SyncId).id,
         dropOnItem: dropOnItem.getComponent(SyncId).id,
-        hit: data.hit
+        hit: data.hit,
       })
     })
   }
@@ -249,7 +248,7 @@ export function resetEntity(entity: Entity) {
   entity.addComponentOrReplace(
     new Transform({
       position: entity.getComponent(PickedUp).lastPos,
-      rotation: Quaternion.Zero()
+      rotation: Quaternion.Zero(),
     })
   )
   engine.removeEntity(entity.getComponent(PickedUp).parentEntity)
@@ -272,11 +271,11 @@ export function pickUpEntity(
         holdRotation: holdRotation,
         putDownSound: putDownSound,
         anchorPoint: anchorPoint,
-        lastPos: lastPos
+        lastPos: lastPos,
       })
     )
   } else if (entity.getComponent(PickedUp).userId !== userId) {
-    // beer was stolen from another player's hand
+    // item was stolen from another player's hand
 
     const oldLastPos = entity.getComponent(PickedUp).lastPos
     entity.addComponentOrReplace(
@@ -285,7 +284,7 @@ export function pickUpEntity(
         holdRotation: holdRotation,
         putDownSound: putDownSound,
         anchorPoint: anchorPoint,
-        lastPos: oldLastPos
+        lastPos: oldLastPos,
       })
     )
   } else if (entity.getComponent(PickedUp).added) {
@@ -301,7 +300,7 @@ export function pickUpEntity(
   picked.parentEntity.addComponentOrReplace(
     new AttachToAvatar({
       avatarId: picked.userId,
-      anchorPointId: AttachToAvatarAnchorPointId.NameTag
+      anchorPointId: AttachToAvatarAnchorPointId.NameTag,
     })
   )
 
@@ -337,7 +336,7 @@ export function putDownEntity(
   entity.addComponentOrReplace(
     new Transform({
       position: placePosition,
-      rotation: placeRotation ? placeRotation : Quaternion.Zero()
+      rotation: placeRotation ? placeRotation : Quaternion.Zero(),
     })
   )
 }
