@@ -1,24 +1,17 @@
-export class Sound extends Entity {
-  constructor(audio: AudioClip, loop: boolean = false, transform?: Vector3) {
-    super()
-    engine.addEntity(this)
-    this.addComponent(new AudioSource(audio))
-    this.getComponent(AudioSource).loop = loop
-    this.addComponent(new Transform())
-    if (transform) {
-      this.getComponent(Transform).position = transform
-    } else {
-      this.getComponent(Transform).position = Camera.instance.position
-    }
+export function CreateSound(
+  audio: AudioClip,
+  loop: boolean = false,
+  transform?: Vector3
+) {
+  const sound = new Entity()
+  engine.addEntity(sound)
+  sound.addComponent(new AudioSource(audio))
+  sound.getComponent(AudioSource).loop = loop
+  sound.addComponent(new Transform())
+  if (transform) {
+    sound.getComponent(Transform).position = transform
+  } else {
+    sound.getComponent(Transform).position = Camera.instance.position
   }
-
-  playAudioOnceAtPosition(transform: Vector3): void {
-    this.getComponent(Transform).position = transform
-    this.getComponent(AudioSource).playOnce()
-  }
-
-  playAudioAtPosition(transform: Vector3): void {
-    this.getComponent(Transform).position = transform
-    this.getComponent(AudioSource).playing = true
-  }
+  return sound
 }

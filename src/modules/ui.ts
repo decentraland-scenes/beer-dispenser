@@ -1,6 +1,6 @@
 import * as ui from '@dcl/ui-scene-utils'
 
-export let noSign = new ui.CenterImage(
+export const noSign = new ui.CenterImage(
   'images/no-sign.png',
   1,
   true,
@@ -12,6 +12,6 @@ export let noSign = new ui.CenterImage(
     sourceHeight: 512,
     sourceWidth: 512,
     sourceLeft: 0,
-    sourceTop: 0,
+    sourceTop: 0
   }
 )
