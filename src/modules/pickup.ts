@@ -9,8 +9,10 @@ export type pickupComponentArguments = {
   holdPosition?: Vector3
   lastPos?: Vector3
   putDownSound?: string
+  pickUpSound?: string
   anchorPoint?: AttachToAvatarAnchorPointId
   holdRotation?: Quaternion
+  canPickMultiple?: boolean
 }
 
 export type putDownEventData = {
@@ -36,9 +38,11 @@ export class PickedUp {
   userId: string
   holdPosition: Vector3
   parentEntity: Entity
+  pickUpSound: string | undefined
   putDownSound: string | undefined
   anchorPoint: AttachToAvatarAnchorPointId | undefined
   holdRotation: Quaternion
+  canPickMultiple: boolean = false
   constructor(userId: string, args: pickupComponentArguments) {
     this.userId = userId
     this.holdPosition = args.holdPosition
@@ -53,11 +57,16 @@ export class PickedUp {
     this.parentEntity = new Entity()
     engine.addEntity(this.parentEntity)
 
+    if (args.pickUpSound) {
+      this.pickUpSound = args.pickUpSound
+    }
+
     if (args.putDownSound) {
       this.putDownSound = args.putDownSound
-      this.parentEntity.addComponent(
-        new AudioSource(new AudioClip(args.putDownSound))
-      )
+    }
+
+    if (args.canPickMultiple) {
+      this.canPickMultiple = true
     }
 
     log('ADDED PICKEDUP COMPONENT ', currentlyPickedUp)
@@ -106,14 +115,25 @@ export class PickUpSystem implements ISystem {
   }
 
   pickUp(entity: Entity) {
+    const picked = entity.getComponent(PickedUp)
+
+    if (!picked.canPickMultiple && checkIfHolding(picked.userId)) {
+      // player was already holding
+      entity.removeComponent(PickedUp)
+      return
+    }
+
     sceneMessageBus.emit('pickUpItem', {
       id: entity.getComponent(SyncId).id,
-      userId: entity.getComponent(PickedUp).userId,
-      holdPosition: entity.getComponent(PickedUp).holdPosition,
-      holdRotation: entity.getComponent(PickedUp).holdRotation,
-      lastPos: entity.getComponent(PickedUp).lastPos,
-      anchorPoint: entity.getComponent(PickedUp).anchorPoint,
-      putDownSound: entity.getComponent(PickedUp).putDownSound,
+      userId: picked.userId,
+      args: {
+        holdPosition: picked.holdPosition,
+        holdRotation: picked.holdRotation,
+        lastPos: picked.lastPos,
+        anchorPoint: picked.anchorPoint,
+        pickUpSound: picked.pickUpSound,
+        putDownSound: picked.putDownSound
+      }
     })
   }
 
@@ -130,8 +150,8 @@ export class PickUpSystem implements ISystem {
           if (event.hit.normal.y > 0.99) {
             sceneMessageBus.emit('putDownItem', {
               id: pickedUpItem.getComponent(SyncId).id,
-              position: event.hit.hitPoint,
               userId: currentPlayerId,
+              position: event.hit.hitPoint
             })
 
             const hitEntity = engine.entities[event.hit.entityId]
@@ -153,7 +173,7 @@ export class PickUpSystem implements ISystem {
                 userId: currentPlayerId,
                 pickedUpItem: pickedUpItem.getComponent(SyncId).id,
                 dropOnItem: hitEntity.getComponent(SyncId).id,
-                hit: event.hit,
+                hit: event.hit
               })
             }
           } else {
@@ -173,21 +193,20 @@ export class PickUpSystem implements ISystem {
       }
     })
 
-    sceneMessageBus.on('pickUpItem', (itemState: any) => {
-      const pickedUpEntity = getEntityWithId(itemState.id)
+    sceneMessageBus.on(
+      'pickUpItem',
+      (itemState: {
+        id: string
+        userId: string
+        args: pickupComponentArguments
+      }) => {
+        const pickedUpEntity = getEntityWithId(itemState.id)
 
-      if (!pickedUpEntity) return
+        if (!pickedUpEntity) return
 
-      pickUpEntity(
-        pickedUpEntity,
-        itemState.userId,
-        itemState.holdPosition,
-        itemState.holdRotation,
-        itemState.lastPos,
-        itemState.putDownSound,
-        itemState.anchorPoint
-      )
-    })
+        pickUpEntity(pickedUpEntity, itemState.userId, itemState.args)
+      }
+    )
 
     sceneMessageBus.on('putDownItem', (itemState: any) => {
       const droppedEntity = getEntityWithId(itemState.id)
@@ -207,7 +226,7 @@ export class PickUpSystem implements ISystem {
         userId: data.userId,
         pickedUpItem: pickedUpItem.getComponent(SyncId).id,
         dropOnItem: dropOnItem.getComponent(SyncId).id,
-        hit: data.hit,
+        hit: data.hit
       })
     })
   }
@@ -248,7 +267,7 @@ export function resetEntity(entity: Entity) {
   entity.addComponentOrReplace(
     new Transform({
       position: entity.getComponent(PickedUp).lastPos,
-      rotation: Quaternion.Zero(),
+      rotation: Quaternion.Zero()
     })
   )
   engine.removeEntity(entity.getComponent(PickedUp).parentEntity)
@@ -258,35 +277,16 @@ export function resetEntity(entity: Entity) {
 export function pickUpEntity(
   entity: Entity,
   userId: string,
-  holdPosition: Vector3,
-  holdRotation?: Quaternion,
-  lastPos?: Vector3,
-  putDownSound?: string,
-  anchorPoint?: AttachToAvatarAnchorPointId
+  args: pickupComponentArguments
 ) {
   if (!entity.hasComponent(PickedUp)) {
-    entity.addComponentOrReplace(
-      new PickedUp(userId, {
-        holdPosition: holdPosition,
-        holdRotation: holdRotation,
-        putDownSound: putDownSound,
-        anchorPoint: anchorPoint,
-        lastPos: lastPos,
-      })
-    )
+    entity.addComponentOrReplace(new PickedUp(userId, args))
   } else if (entity.getComponent(PickedUp).userId !== userId) {
     // item was stolen from another player's hand
 
     const oldLastPos = entity.getComponent(PickedUp).lastPos
-    entity.addComponentOrReplace(
-      new PickedUp(userId, {
-        holdPosition: holdPosition,
-        holdRotation: holdRotation,
-        putDownSound: putDownSound,
-        anchorPoint: anchorPoint,
-        lastPos: oldLastPos,
-      })
-    )
+    entity.addComponentOrReplace(new PickedUp(userId, args))
+    entity.getComponent(PickedUp).lastPos = oldLastPos
   } else if (entity.getComponent(PickedUp).added) {
     return
   }
@@ -300,7 +300,7 @@ export function pickUpEntity(
   picked.parentEntity.addComponentOrReplace(
     new AttachToAvatar({
       avatarId: picked.userId,
-      anchorPointId: AttachToAvatarAnchorPointId.NameTag,
+      anchorPointId: AttachToAvatarAnchorPointId.NameTag
     })
   )
 
@@ -308,6 +308,12 @@ export function pickUpEntity(
 
   entity.getComponent(Transform).position = picked.holdPosition
   entity.getComponent(Transform).rotation = picked.holdRotation
+
+  if (args.pickUpSound) {
+    entity
+      .addComponentOrReplace(new AudioSource(new AudioClip(args.pickUpSound)))
+      .playOnce()
+  }
 }
 
 export function putDownEntity(
@@ -317,10 +323,13 @@ export function putDownEntity(
 ) {
   if (!entity.hasComponent(PickedUp)) return
 
-  if (entity.getComponent(PickedUp).putDownSound) {
+  const picked = entity.getComponent(PickedUp)
+
+  if (picked.putDownSound) {
     entity
-      .getComponent(PickedUp)
-      .parentEntity.getComponent(AudioSource)
+      .addComponentOrReplace(
+        new AudioSource(new AudioClip(picked.putDownSound))
+      )
       .playOnce()
   }
 
@@ -336,7 +345,7 @@ export function putDownEntity(
   entity.addComponentOrReplace(
     new Transform({
       position: placePosition,
-      rotation: placeRotation ? placeRotation : Quaternion.Zero(),
+      rotation: placeRotation ? placeRotation : Quaternion.Zero()
     })
   )
 }

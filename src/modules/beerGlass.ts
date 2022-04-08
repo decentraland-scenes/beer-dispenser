@@ -2,7 +2,7 @@ import * as utils from '@dcl/ecs-scene-utils'
 import { CreateSound } from './sound'
 import { currentPlayerId } from './trackPlayers'
 import { sceneMessageBus } from 'src/modules/messageBus'
-import { checkIfHolding, getPickedUpItem, PickedUp } from './pickup'
+import { getPickedUpItem, PickedUp } from './pickup'
 import { getEntityWithId, SyncId } from './syncId'
 
 // Track player's state
@@ -14,7 +14,6 @@ export enum BeerType {
 }
 
 // Sound
-const pickUpSound = CreateSound(new AudioClip('sounds/pickUp.mp3'))
 const swallowSound = CreateSound(new AudioClip('sounds/swallow.mp3'))
 
 @Component('glasData')
@@ -69,15 +68,14 @@ export function CreateBeerGlass(
       (_e) => {
         if (
           currentPlayerId !== undefined &&
-          !checkIfHolding(currentPlayerId) &&
+          //   !checkIfHolding(currentPlayerId) &&
           !glass.getComponent(GlassData).isBeingFilled
         ) {
-          pickUpSound.getComponent(AudioSource).playOnce()
-
           glass.addComponentOrReplace(
             new PickedUp(currentPlayerId, {
               holdPosition: glass.getComponent(GlassData).holdPosition,
               lastPos: glass.getComponent(Transform).position,
+              pickUpSound: 'sounds/pickUp.mp3',
               putDownSound: 'sounds/putDown.mp3'
             })
           )
